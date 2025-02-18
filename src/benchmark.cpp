@@ -11,6 +11,7 @@
 #include "alignment.h"
 #include "penalties.h"
 #include "dp_aligner.h"
+#include "dp_aligner_mod.h"
 
 struct CMDArgs {
     std::string dataset = "";
@@ -185,6 +186,7 @@ int main(int argc, char *const *argv) {
     dataset.seekg(0, std::ios::beg);
 
     DPAligner dpa(*penalties, max_size_target, max_size_query);
+    DPAlignerMod dpa_mod(*penalties, max_size_target, max_size_query);
 
     std::string target;
     target.reserve(max_size_target);
@@ -203,24 +205,37 @@ int main(int argc, char *const *argv) {
         std::string_view target_view(target.data() + 1, target.size() - 1);
         std::string_view query_view(query.data() + 1, query.size() - 1);
 
-        auto dpa_cigar = dpa.align(target_view, query_view);
+        // Traditional DP.
 
-        std::string_view dpa_cigar_view(dpa_cigar.data(), dpa_cigar.size());
+        const auto dpa_cigar = dpa.align(target_view, query_view);
 
-        auto dpa_alignment = alignment::cigar_to_alignment(dpa_cigar_view,
-                                                           target_view,
-                                                           query_view);
+        const std::string_view dpa_cigar_view(dpa_cigar.data(), dpa_cigar.size());
 
-        const int dpa_score = alignment::alignment_score(*penalties,
-                                                         dpa_alignment.first,
-                                                         dpa_alignment.second);
+        const auto dpa_alignment = alignment::cigar_to_alignment(dpa_cigar_view,
+                                                                 target_view,
+                                                                 query_view);
 
-        if (dpa_score != alignment::cigar_score(*penalties, dpa_cigar_view)) {
-            std::cerr << "Score mismatch\n";
+        const auto dpa_score = alignment::cigar_score(*penalties, dpa_cigar_view);
+
+        // Modified DP.
+
+        const auto dpa_mod_cigar = dpa_mod.align(target_view, query_view);
+
+        const std::string_view dpa_mod_cigar_view(dpa_mod_cigar.data(), dpa_mod_cigar.size());
+
+        const auto dpa_mod_alignment = alignment::cigar_to_alignment(dpa_mod_cigar_view,
+                                                                     target_view,
+                                                                     query_view);
+
+        const auto dpa_mod_score = alignment::cigar_score(*penalties, dpa_mod_cigar_view);
+
+        if (dpa_score != dpa_mod_score) {
+            std::cerr << "DPA and DPA-Mod Scores do not match\n";
+            std::cerr << "Traditional DP: " << dpa_score << "\n";
+            std::cerr << "Modified DP: " << dpa_mod_score << "\n";
             return EXIT_FAILURE;
         }
 
-        std::cout << "Score: " << dpa_score << "\n";
         std::cout << "Alignment:\n";
         std::cout << dpa_alignment.first << "\n";
         std::cout << dpa_alignment.second << "\n";
