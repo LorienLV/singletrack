@@ -13,6 +13,8 @@
 #include "dp_aligner.h"
 #include "dp_aligner_mod.h"
 
+#define PRINT_ALIGNMENTS 0
+
 struct CMDArgs {
     std::string dataset = "";
     int match = 0;
@@ -194,6 +196,9 @@ int main(int argc, char *const *argv) {
     std::string query;
     query.reserve(max_size_query);
 
+    std::chrono::duration<double> dp_time(0);
+    std::chrono::duration<double> dp_mod_time(0);
+
     while (!dataset.eof()) {
         std::getline(dataset, target);
         std::getline(dataset, query);
@@ -207,7 +212,12 @@ int main(int argc, char *const *argv) {
 
         // Traditional DP.
 
+        const auto start_dp = std::chrono::high_resolution_clock::now();
+
         const auto dpa_cigar = dpa.align(target_view, query_view);
+
+        const auto end_dp = std::chrono::high_resolution_clock::now();
+        dp_time += end_dp - start_dp;
 
         const std::string_view dpa_cigar_view(dpa_cigar.data(), dpa_cigar.size());
 
@@ -219,7 +229,12 @@ int main(int argc, char *const *argv) {
 
         // Modified DP.
 
+        const auto start_dp_mod = std::chrono::high_resolution_clock::now();
+
         const auto dpa_mod_cigar = dpa_mod.align(target_view, query_view);
+
+        const auto end_dp_mod = std::chrono::high_resolution_clock::now();
+        dp_mod_time += end_dp_mod - start_dp_mod;
 
         const std::string_view dpa_mod_cigar_view(dpa_mod_cigar.data(), dpa_mod_cigar.size());
 
@@ -236,10 +251,15 @@ int main(int argc, char *const *argv) {
             return EXIT_FAILURE;
         }
 
+#if PRINT_ALIGNMENTS
         std::cout << "Alignment:\n";
         std::cout << dpa_alignment.first << "\n";
         std::cout << dpa_alignment.second << "\n";
+#endif
     }
+
+    std::cout << "Traditional DP Time: " << dp_time.count() << "s\n";
+    std::cout << "Modified DP Time: " << dp_mod_time.count() << "s\n";
 
     return EXIT_SUCCESS;
 }
