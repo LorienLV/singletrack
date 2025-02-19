@@ -43,44 +43,13 @@ DPAlignerMod::DPAlignerMod(const Penalties& penalties,
         }
     }
 
-    // Initialize I and D.
     if (_penalties.type() == Penalties::Type::Affine ||
         _penalties.type() == Penalties::Type::DualAffine) {
-
-        _imatrix.resize(_mmatrix.size());
-        _dmatrix.resize(_mmatrix.size());
-
-        imatrix(0, 0) = 0;
-        imatrix(0, 0) = 0;
-
-        for (int j = 1; j < _max_size_target + 1; ++j) {
-            imatrix(0, j) = _penalties.gapo() + j * _penalties.gape();
-            dmatrix(0, j) = mmatrix(0, j) + _penalties.gapo();
-        }
-        for (int i = 1; i < _max_size_query + 1; ++i) {
-            dmatrix(i, 0) = _penalties.gapo() + i * _penalties.gape();
-            imatrix(i, 0) = mmatrix(i, 0) + _penalties.gapo();
-        }
+        _drow.resize(_max_size_target + 1, 0);
     }
 
-    // Initialize I2 and D2.
     if (_penalties.type() == Penalties::Type::DualAffine) {
-
-        _imatrix2.resize(_mmatrix.size());
-        _dmatrix2.resize(_mmatrix.size());
-
-        imatrix2(0, 0) = 0;
-        dmatrix2(0, 0) = 0;
-
-        for (int j = 1; j < _max_size_target + 1; ++j) {
-            imatrix2(0, j) = _penalties.gapo2() + j * _penalties.gape2();
-            dmatrix2(0, j) = mmatrix(0, j) + _penalties.gapo2();
-        }
-
-        for (int i = 1; i < _max_size_query + 1; ++i) {
-            dmatrix2(i, 0) = _penalties.gapo2() + i * _penalties.gape2();
-            imatrix2(i, 0) = mmatrix(i, 0) + _penalties.gapo2();
-        }
+        _drow2.resize(_max_size_target + 1, 0);
     }
 }
 
@@ -97,58 +66,76 @@ void DPAlignerMod::align_glinear(std::string_view target, std::string_view query
 }
 
 void DPAlignerMod::align_gaffine(std::string_view target, std::string_view query) {
+    // Initialize the D row.
+    for (int j = 1; j < std::ssize(target) + 1; ++j) {
+        _drow[j] = mmatrix(0, j) + _penalties.gapo();
+    }
+
     for (int i = 1; i < std::ssize(query) + 1; ++i) {
+
+        _icell = mmatrix(i, 0) + _penalties.gapo();
+
         for (int j = 1; j < std::ssize(target) + 1; ++j) {
 
             const int ins = std::max({
                 mmatrix(i, j - 1) + _penalties.gapo() + _penalties.gape(),
-                imatrix(i, j - 1) + _penalties.gape(),
+                _icell + _penalties.gape()
             });
 
             const int del = std::max({
                 mmatrix(i - 1, j) + _penalties.gapo() + _penalties.gape(),
-                dmatrix(i - 1, j) + _penalties.gape(),
+                _drow[j] + _penalties.gape()
             });
 
             const int sub = mmatrix(i - 1, j - 1) + subs(target[j - 1], query[i - 1]);
 
-            imatrix(i, j) = ins;
-            dmatrix(i, j) = del;
+            _icell = ins;
+            _drow[j] = del;
             mmatrix(i, j) = std::max({sub, ins, del});
         }
     }
 }
 
 void DPAlignerMod::align_dgaffine(std::string_view target, std::string_view query) {
+    // Initialize the D1 and D2 rows.
+    for (int j = 1; j < std::ssize(target) + 1; ++j) {
+        _drow[j] = mmatrix(0, j) + _penalties.gapo();
+        _drow2[j] = mmatrix(0, j) + _penalties.gapo2();
+    }
+
     for (int i = 1; i < std::ssize(query) + 1; ++i) {
+
+        _icell = mmatrix(i, 0) + _penalties.gapo();
+        _icell2 = mmatrix(i, 0) + _penalties.gapo2();
+
         for (int j = 1; j < std::ssize(target) + 1; ++j) {
 
             const int ins1 = std::max({
                 mmatrix(i, j - 1) + _penalties.gapo() + _penalties.gape(),
-                imatrix(i, j - 1) + _penalties.gape(),
+                _icell + _penalties.gape()
             });
 
             const int ins2 = std::max({
                 mmatrix(i, j - 1) + _penalties.gapo2() + _penalties.gape2(),
-                imatrix2(i, j - 1) + _penalties.gape2(),
+                _icell2 + _penalties.gape2()
             });
 
             const int del1 = std::max({
                 mmatrix(i - 1, j) + _penalties.gapo() + _penalties.gape(),
-                dmatrix(i - 1, j) + _penalties.gape(),
+                _drow[j] + _penalties.gape()
             });
 
             const int del2 = std::max({
                 mmatrix(i - 1, j) + _penalties.gapo2() + _penalties.gape2(),
-                dmatrix2(i - 1, j) + _penalties.gape2(),
+                _drow2[j] + _penalties.gape2()
             });
 
             const int sub = mmatrix(i - 1, j - 1) + subs(target[j - 1], query[i - 1]);
 
-            imatrix(i, j) = ins1;
-            imatrix2(i, j) = ins2;
-            dmatrix(i, j) = del1;
-            dmatrix2(i, j) = del2;
+            _icell = ins1;
+            _icell2 = ins2;
+            _drow[j] = del1;
+            _drow2[j] = del2;
             mmatrix(i, j) = std::max({sub, ins1, ins2, del1, del2});
         }
     }

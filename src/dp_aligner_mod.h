@@ -109,15 +109,9 @@ private:
     std::vector<int> _mmatrix;
     int &mmatrix(int i, int j) { return _mmatrix[i * (_max_size_target + 1) + j]; }
 
-    std::vector<int> _imatrix;
-    int &imatrix(int i, int j) { return _imatrix[i * (_max_size_target + 1) + j]; }
+    int _icell;
+    int _icell2;
 
-    std::vector<int> _dmatrix;
-    int &dmatrix(int i, int j) { return _dmatrix[i * (_max_size_target + 1) + j]; }
-
-    std::vector<int> _imatrix2;
-    int &imatrix2(int i, int j) { return _imatrix2[i * (_max_size_target + 1) + j]; }
-
-    std::vector<int> _dmatrix2;
-    int &dmatrix2(int i, int j) { return _dmatrix2[i * (_max_size_target + 1) + j]; }
+    std::vector<int> _drow;
+    std::vector<int> _drow2;
 };
