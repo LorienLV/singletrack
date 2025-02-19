@@ -109,9 +109,6 @@ private:
     std::vector<int> _mmatrix;
     int &mmatrix(int i, int j) { return _mmatrix[i * (_max_size_target + 1) + j]; }
 
-    int _icell;
-    int _icell2;
-
     std::vector<int> _drow;
     std::vector<int> _drow2;
 };

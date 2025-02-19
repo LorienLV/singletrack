@@ -73,7 +73,7 @@ void DPAlignerMod::align_gaffine(std::string_view target, std::string_view query
 
     for (int i = 1; i < std::ssize(query) + 1; ++i) {
 
-        _icell = mmatrix(i, 0) + _penalties.gapo();
+        int _icell = mmatrix(i, 0) + _penalties.gapo();
 
         for (int j = 1; j < std::ssize(target) + 1; ++j) {
 
@@ -105,8 +105,8 @@ void DPAlignerMod::align_dgaffine(std::string_view target, std::string_view quer
 
     for (int i = 1; i < std::ssize(query) + 1; ++i) {
 
-        _icell = mmatrix(i, 0) + _penalties.gapo();
-        _icell2 = mmatrix(i, 0) + _penalties.gapo2();
+        int _icell = mmatrix(i, 0) + _penalties.gapo();
+        int _icell2 = mmatrix(i, 0) + _penalties.gapo2();
 
         for (int j = 1; j < std::ssize(target) + 1; ++j) {
 
