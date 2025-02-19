@@ -159,31 +159,28 @@ std::string DPAlignerMod::traceback_glinear(std::string_view target, std::string
     int i = static_cast<int>(std::ssize(query));
     int j = static_cast<int>(std::ssize(target));
 
+    char ins_char = 'I';
+    char del_char = 'D';
+
+    if constexpr (swapped) {
+        std::swap(ins_char, del_char);
+    }
+
     std::string cigar;
     cigar.resize_and_overwrite(target.size() + query.size(), [&](char* buf, size_t size) {
         (void)size; // Unused.
 
         int idx = 0;
         while (i > 0 || j > 0) {
-            if (i > 0 && mmatrix(i, j) == mmatrix(i - 1, j) + _penalties.gape()) {
-                if constexpr (swapped) {
-                    buf[idx] = 'I';
-                }
-                else {
-                    buf[idx] = 'D';
-                }
-
-                i -= 1;
-            }
-            else if (j > 0 && mmatrix(i, j) == mmatrix(i, j - 1) + _penalties.gape()) {
-                if constexpr (swapped) {
-                    buf[idx] = 'D';
-                }
-                else {
-                    buf[idx] = 'I';
-                }
+            if (j > 0 && mmatrix(i, j) == mmatrix(i, j - 1) + _penalties.gape()) {
+                buf[idx] = ins_char;
 
                 j -= 1;
+            }
+            else if (i > 0 && mmatrix(i, j) == mmatrix(i - 1, j) + _penalties.gape()) {
+                buf[idx] = del_char;
+
+                i -= 1;
             }
             else {
                 buf[idx] = (target[j - 1] == query[i - 1]) ? 'M' : 'X';
@@ -215,6 +212,13 @@ std::string DPAlignerMod::traceback_gaffine(std::string_view target, std::string
     int score_ins = 0;
     int score_del = 0;
 
+    char ins_char = 'I';
+    char del_char = 'D';
+
+    if constexpr (swapped) {
+        std::swap(ins_char, del_char);
+    }
+
     bool in_mmatrix = true;
 
     std::string cigar;
@@ -244,12 +248,12 @@ std::string DPAlignerMod::traceback_gaffine(std::string_view target, std::string
                     j_ins = j;
                     i_del = i;
 
-                    score_del = mmatrix(i, j);
                     score_ins = mmatrix(i, j);
+                    score_del = mmatrix(i, j);
                 }
             }
             else {
-                // Follow the ins path.
+                // --- Follow the ins path ---
 
                 // We have found a path back to M.
                 if (j_ins > 0 && score_ins == mmatrix(i, j_ins - 1) +
@@ -258,13 +262,7 @@ std::string DPAlignerMod::traceback_gaffine(std::string_view target, std::string
 
                     const int nins = j - j_ins;
                     for (int k = 0; k < nins; ++k) {
-                        if constexpr (swapped) {
-                            buf[idx] = 'D';
-                        }
-                        else {
-                            buf[idx] = 'I';
-                        }
-
+                        buf[idx] = ins_char;
                         idx += 1;
                     }
 
@@ -279,7 +277,7 @@ std::string DPAlignerMod::traceback_gaffine(std::string_view target, std::string
                     j_ins -= 1;
                 }
 
-                // Follow the del path.
+                // --- Follow the del path ---
 
                 // We have found a path back to M.
                 if (i_del > 0 && score_del == mmatrix(i_del - 1, j) +
@@ -288,13 +286,7 @@ std::string DPAlignerMod::traceback_gaffine(std::string_view target, std::string
 
                     const int ndel = i - i_del;
                     for (int k = 0; k < ndel; ++k) {
-                        if constexpr (swapped) {
-                            buf[idx] = 'I';
-                        }
-                        else {
-                            buf[idx] = 'D';
-                        }
-
+                        buf[idx] = del_char;
                         idx += 1;
                     }
 
@@ -321,18 +313,27 @@ std::string DPAlignerMod::traceback_gaffine(std::string_view target, std::string
 
 template <bool swapped>
 std::string DPAlignerMod::traceback_dgaffine(std::string_view target, std::string_view query) {
-    enum class Matrix {
-        M,
-        I1,
-        D1,
-        I2,
-        D2
-    };
-
     int i = static_cast<int>(std::ssize(query));
     int j = static_cast<int>(std::ssize(target));
 
-    Matrix curr_matrix = Matrix::M;
+    int j_ins1 = j;
+    int j_ins2 = j;
+    int i_del1 = i;
+    int i_del2 = i;
+
+    int score_ins1 = 0;
+    int score_ins2 = 0;
+    int score_del1 = 0;
+    int score_del2 = 0;
+
+    char ins_char = 'I';
+    char del_char = 'D';
+
+    if constexpr (swapped) {
+        std::swap(ins_char, del_char);
+    }
+
+    bool in_mmatrix = true;
 
     std::string cigar;
     cigar.resize_and_overwrite(target.size() + query.size(), [&](char* buf, size_t size) {
@@ -341,20 +342,11 @@ std::string DPAlignerMod::traceback_dgaffine(std::string_view target, std::strin
         int idx = 0;
 
         while (i > 0 || j > 0) {
-            if (curr_matrix == Matrix::M) {
-                if (j > 0 && mmatrix(i, j) == imatrix(i, j)) {
-                    curr_matrix = Matrix::I1;
-                }
-                else if (j > 0 && mmatrix(i, j) == imatrix2(i, j)) {
-                    curr_matrix = Matrix::I2;
-                }
-                else if (i > 0 && mmatrix(i, j) == dmatrix(i, j)) {
-                    curr_matrix = Matrix::D1;
-                }
-                else if (i > 0 && mmatrix(i, j) == dmatrix2(i, j)) {
-                    curr_matrix = Matrix::D2;
-                }
-                else {
+            if (in_mmatrix) {
+                if (i > 0 && j > 0 &&
+                    mmatrix(i, j) == mmatrix(i - 1, j - 1) +
+                                     subs(target[j - 1], query[i - 1])) {
+
                     buf[idx] = (target[j - 1] == query[i - 1]) ? 'M' : 'X';
 
                     idx += 1;
@@ -362,73 +354,118 @@ std::string DPAlignerMod::traceback_dgaffine(std::string_view target, std::strin
                     i -= 1;
                     j -= 1;
                 }
-            }
-            else if (j > 0 && curr_matrix == Matrix::I1) {
-                if (imatrix(i, j) != imatrix(i, j - 1) + _penalties.gape()) {
-                    curr_matrix = Matrix::M;
-                }
-
-                if constexpr (swapped) {
-                    buf[idx] = 'D';
-                }
                 else {
-                    buf[idx] = 'I';
+                    in_mmatrix = false;
+
+                    // Freeze i and j. We are in either I1, I2, D1 or D2.
+                    // Find a coherent path back to M.
+                    j_ins1 = j;
+                    j_ins2 = j;
+                    i_del1 = i;
+                    i_del2 = i;
+
+                    score_ins1 = mmatrix(i, j);
+                    score_ins2 = mmatrix(i, j);
+                    score_del1 = mmatrix(i, j);
+                    score_del2 = mmatrix(i, j);
                 }
-
-                idx += 1;
-
-                j -= 1;
-            }
-            else if (j > 0 && curr_matrix == Matrix::I2) {
-                if (imatrix2(i, j) != imatrix2(i, j - 1) + _penalties.gape2()) {
-                    curr_matrix = Matrix::M;
-                }
-
-                if constexpr (swapped) {
-                    buf[idx] = 'D';
-                }
-                else {
-                    buf[idx] = 'I';
-                }
-
-                idx += 1;
-
-                j -= 1;
-            }
-            else if (i > 0 && curr_matrix == Matrix::D1) {
-                if (dmatrix(i, j) != dmatrix(i - 1, j) + _penalties.gape()) {
-                    curr_matrix = Matrix::M;
-                }
-
-                if constexpr (swapped) {
-                    buf[idx] = 'I';
-                }
-                else {
-                    buf[idx] = 'D';
-                }
-
-                idx += 1;
-
-                i -= 1;
-            }
-            else if (i > 0 && curr_matrix == Matrix::D2) {
-                if (dmatrix2(i, j) != dmatrix2(i - 1, j) + _penalties.gape2()) {
-                    curr_matrix = Matrix::M;
-                }
-
-                if constexpr (swapped) {
-                    buf[idx] = 'I';
-                }
-                else {
-                    buf[idx] = 'D';
-                }
-
-                idx += 1;
-
-                i -= 1;
             }
             else {
-                curr_matrix = Matrix::M;
+                // --- Follow the ins1 path ---
+
+                // We have found a path back to M.
+                if (j_ins1 > 0 && score_ins1 == mmatrix(i, j_ins1 - 1) +
+                                                _penalties.gapo() + _penalties.gape()) {
+                    j_ins1 -= 1;
+
+                    const int nins = j - j_ins1;
+                    for (int k = 0; k < nins; ++k) {
+                        buf[idx] = ins_char;
+                        idx += 1;
+                    }
+
+                    j = j_ins1;
+                    in_mmatrix = true;
+
+                    continue;
+                }
+                // Keep following the ins1 path.
+                else if (j_ins1 > 0) {
+                    score_ins1 -= _penalties.gape();
+                    j_ins1 -= 1;
+                }
+
+                // --- Follow the ins2 path ---
+
+                // We have found a path back to M.
+                if (j_ins2 > 0 && score_ins2 == mmatrix(i, j_ins2 - 1) +
+                                                _penalties.gapo2() + _penalties.gape2()) {
+                    j_ins2 -= 1;
+
+                    const int nins = j - j_ins2;
+                    for (int k = 0; k < nins; ++k) {
+                        buf[idx] = ins_char;
+                        idx += 1;
+                    }
+
+                    j = j_ins2;
+                    in_mmatrix = true;
+
+                    continue;
+                }
+                // Keep following the ins2 path.
+                else if (j_ins2 > 0) {
+                    score_ins2 -= _penalties.gape2();
+                    j_ins2 -= 1;
+                }
+
+                // --- Follow the del1 path ---
+
+                // We have found a path back to M.
+                if (i_del1 > 0 && score_del1 == mmatrix(i_del1 - 1, j) +
+                                                _penalties.gapo() + _penalties.gape()) {
+                    i_del1 -= 1;
+
+                    const int ndel = i - i_del1;
+                    for (int k = 0; k < ndel; ++k) {
+                        buf[idx] = del_char;
+                        idx += 1;
+                    }
+
+                    i = i_del1;
+                    in_mmatrix = true;
+
+                    continue;
+                }
+                // Keep following the del1 path.
+                else if (i_del1 > 0) {
+                    score_del1 -= _penalties.gape();
+                    i_del1 -= 1;
+                }
+
+                // --- Follow the del2 path ---
+
+                // We have found a path back to M.
+                if (i_del2 > 0 && score_del2 == mmatrix(i_del2 - 1, j) +
+                                                _penalties.gapo2() + _penalties.gape2()) {
+                    i_del2 -= 1;
+
+                    const int ndel = i - i_del2;
+                    for (int k = 0; k < ndel; ++k) {
+                        buf[idx] = del_char;
+                        idx += 1;
+                    }
+
+                    i = i_del2;
+                    in_mmatrix = true;
+
+                    continue;
+                }
+                // Keep following the del2 path.
+                else if (i_del2 > 0) {
+                    score_del2 -= _penalties.gape2();
+                    i_del2 -= 1;
+                }
             }
         }
 
