@@ -193,11 +193,7 @@ std::string DPAlignerMod::traceback_gaffine(std::string_view target, std::string
     int i = static_cast<int>(std::ssize(query));
     int j = static_cast<int>(std::ssize(target));
 
-    int j_ins = j;
-    int i_del = i;
-
-    int score_ins = 0;
-    int score_del = 0;
+    int nindels = 0;
 
     char ins_char = 'I';
     char del_char = 'D';
@@ -232,60 +228,51 @@ std::string DPAlignerMod::traceback_gaffine(std::string_view target, std::string
 
                     // Freeze i and j. We are in either I or D. Find a coherent path
                     // back to M.
-                    j_ins = j;
-                    i_del = i;
-
-                    score_ins = mmatrix(i, j);
-                    score_del = mmatrix(i, j);
+                    nindels = 0;
                 }
             }
             else {
-                // --- Follow the ins path ---
+                auto find_path_back_to_m = [&](const int new_i,
+                                               const int new_j,
+                                               const int expected_score,
+                                               const char indel_char) {
 
-                // We have found a path back to M.
-                if (j_ins > 0 && score_ins == mmatrix(i, j_ins - 1) +
-                                              _penalties.gapo() + _penalties.gape()) {
-                    j_ins -= 1;
+                    if (new_i < 0 || new_j < 0) {
+                        return false;
+                    }
 
-                    const int nins = j - j_ins;
-                    for (int k = 0; k < nins; ++k) {
-                        buf[idx] = ins_char;
+                    if (expected_score != mmatrix(new_i, new_j)) {
+                        return false;
+                    }
+
+                    i = new_i;
+                    j = new_j;
+
+                    in_mmatrix = true;
+
+                    for (int k = 0; k < nindels; ++k) {
+                        buf[idx] = indel_char;
                         idx += 1;
                     }
 
-                    j = j_ins;
-                    in_mmatrix = true;
+                    return true;
+                };
 
+                ++nindels;
+
+                const int indel_i = i - nindels;
+                const int indel_j = j - nindels;
+                const int back_to_m_score = mmatrix(i, j) -
+                                            nindels * _penalties.gape() -
+                                            _penalties.gapo();
+
+                if (find_path_back_to_m(i, indel_j, back_to_m_score, ins_char)) {
+                    // Ins path.
                     continue;
                 }
-                // Keep following the ins path.
-                else if (j_ins > 0) {
-                    score_ins -= _penalties.gape();
-                    j_ins -= 1;
-                }
-
-                // --- Follow the del path ---
-
-                // We have found a path back to M.
-                if (i_del > 0 && score_del == mmatrix(i_del - 1, j) +
-                                              _penalties.gapo() + _penalties.gape()) {
-                    i_del -= 1;
-
-                    const int ndel = i - i_del;
-                    for (int k = 0; k < ndel; ++k) {
-                        buf[idx] = del_char;
-                        idx += 1;
-                    }
-
-                    i = i_del;
-                    in_mmatrix = true;
-
+                else if (find_path_back_to_m(indel_i, j, back_to_m_score, del_char)) {
+                    // Del path.
                     continue;
-                }
-                // Keep following the del path.
-                else if (i_del > 0) {
-                    score_del -= _penalties.gape();
-                    i_del -= 1;
                 }
             }
         }
@@ -303,15 +290,7 @@ std::string DPAlignerMod::traceback_dgaffine(std::string_view target, std::strin
     int i = static_cast<int>(std::ssize(query));
     int j = static_cast<int>(std::ssize(target));
 
-    int j_ins1 = j;
-    int j_ins2 = j;
-    int i_del1 = i;
-    int i_del2 = i;
-
-    int score_ins1 = 0;
-    int score_ins2 = 0;
-    int score_del1 = 0;
-    int score_del2 = 0;
+    int nindels = 0;
 
     char ins_char = 'I';
     char del_char = 'D';
@@ -346,112 +325,61 @@ std::string DPAlignerMod::traceback_dgaffine(std::string_view target, std::strin
 
                     // Freeze i and j. We are in either I1, I2, D1 or D2.
                     // Find a coherent path back to M.
-                    j_ins1 = j;
-                    j_ins2 = j;
-                    i_del1 = i;
-                    i_del2 = i;
-
-                    score_ins1 = mmatrix(i, j);
-                    score_ins2 = mmatrix(i, j);
-                    score_del1 = mmatrix(i, j);
-                    score_del2 = mmatrix(i, j);
+                    nindels = 0;
                 }
             }
             else {
-                // --- Follow the ins1 path ---
+                auto find_path_back_to_m = [&](const int new_i,
+                                               const int new_j,
+                                               const int expected_score,
+                                               const char indel_char) {
+                    if (new_i < 0 || new_j < 0) {
+                        return false;
+                    }
 
-                // We have found a path back to M.
-                if (j_ins1 > 0 && score_ins1 == mmatrix(i, j_ins1 - 1) +
-                                                _penalties.gapo() + _penalties.gape()) {
-                    j_ins1 -= 1;
+                    if (expected_score != mmatrix(new_i, new_j)) {
+                        return false;
+                    }
 
-                    const int nins = j - j_ins1;
-                    for (int k = 0; k < nins; ++k) {
-                        buf[idx] = ins_char;
+                    i = new_i;
+                    j = new_j;
+
+                    in_mmatrix = true;
+
+                    for (int k = 0; k < nindels; ++k) {
+                        buf[idx] = indel_char;
                         idx += 1;
                     }
 
-                    j = j_ins1;
-                    in_mmatrix = true;
+                    return true;
+                };
 
+                ++nindels;
+
+                const int indel_i = i - nindels;
+                const int indel_j = j - nindels;
+                const int back_to_m_score1 = mmatrix(i, j) -
+                                            nindels * _penalties.gape() -
+                                            _penalties.gapo();
+                const int back_to_m_score2 = mmatrix(i, j) -
+                                            nindels * _penalties.gape2() -
+                                            _penalties.gapo2();
+
+                if (find_path_back_to_m(i, indel_j, back_to_m_score1, ins_char)) {
+                    // Ins1 path.
                     continue;
                 }
-                // Keep following the ins1 path.
-                else if (j_ins1 > 0) {
-                    score_ins1 -= _penalties.gape();
-                    j_ins1 -= 1;
-                }
-
-                // --- Follow the ins2 path ---
-
-                // We have found a path back to M.
-                if (j_ins2 > 0 && score_ins2 == mmatrix(i, j_ins2 - 1) +
-                                                _penalties.gapo2() + _penalties.gape2()) {
-                    j_ins2 -= 1;
-
-                    const int nins = j - j_ins2;
-                    for (int k = 0; k < nins; ++k) {
-                        buf[idx] = ins_char;
-                        idx += 1;
-                    }
-
-                    j = j_ins2;
-                    in_mmatrix = true;
-
+                else if (find_path_back_to_m(indel_i, j, back_to_m_score1, del_char)) {
+                    // Del1 path.
                     continue;
                 }
-                // Keep following the ins2 path.
-                else if (j_ins2 > 0) {
-                    score_ins2 -= _penalties.gape2();
-                    j_ins2 -= 1;
-                }
-
-                // --- Follow the del1 path ---
-
-                // We have found a path back to M.
-                if (i_del1 > 0 && score_del1 == mmatrix(i_del1 - 1, j) +
-                                                _penalties.gapo() + _penalties.gape()) {
-                    i_del1 -= 1;
-
-                    const int ndel = i - i_del1;
-                    for (int k = 0; k < ndel; ++k) {
-                        buf[idx] = del_char;
-                        idx += 1;
-                    }
-
-                    i = i_del1;
-                    in_mmatrix = true;
-
+                else if (find_path_back_to_m(i, indel_j, back_to_m_score2, ins_char)) {
+                    // Ins2 path.
                     continue;
                 }
-                // Keep following the del1 path.
-                else if (i_del1 > 0) {
-                    score_del1 -= _penalties.gape();
-                    i_del1 -= 1;
-                }
-
-                // --- Follow the del2 path ---
-
-                // We have found a path back to M.
-                if (i_del2 > 0 && score_del2 == mmatrix(i_del2 - 1, j) +
-                                                _penalties.gapo2() + _penalties.gape2()) {
-                    i_del2 -= 1;
-
-                    const int ndel = i - i_del2;
-                    for (int k = 0; k < ndel; ++k) {
-                        buf[idx] = del_char;
-                        idx += 1;
-                    }
-
-                    i = i_del2;
-                    in_mmatrix = true;
-
+                else if (find_path_back_to_m(indel_i, j, back_to_m_score2, del_char)) {
+                    // Del2 path.
                     continue;
-                }
-                // Keep following the del2 path.
-                else if (i_del2 > 0) {
-                    score_del2 -= _penalties.gape2();
-                    i_del2 -= 1;
                 }
             }
         }
