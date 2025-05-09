@@ -91,16 +91,6 @@ private:
     template <bool swapped>
     std::string traceback_dgaffine(std::string_view target, std::string_view query);
 
-    /**
-     * Get the score of the substitution between two characters.
-     *
-     * @param t The target character.
-     * @param q The query character.
-     */
-    inline int subs(char t, char q) const {
-        return (t == q) ? _penalties.match() : _penalties.mismatch();
-    }
-
     Penalties _penalties;
 
     int _max_size_target;

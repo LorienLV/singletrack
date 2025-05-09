@@ -89,7 +89,8 @@ void DPAligner::align_glinear(std::string_view target, std::string_view query) {
         for (int j = 1; j < std::ssize(target) + 1; ++j) {
             const int ins = mmatrix(i, j - 1) + _penalties.gape();
             const int del = mmatrix(i - 1, j) + _penalties.gape();
-            const int sub = mmatrix(i - 1, j - 1) + subs(target[j - 1], query[i - 1]);
+            const int sub = mmatrix(i - 1, j - 1) +
+                            _penalties.subs(target[j - 1], query[i - 1]);
 
             mmatrix(i, j) = std::max({ins, del, sub});
         }
@@ -110,7 +111,8 @@ void DPAligner::align_gaffine(std::string_view target, std::string_view query) {
                 dmatrix(i - 1, j) + _penalties.gape(),
             });
 
-            const int sub = mmatrix(i - 1, j - 1) + subs(target[j - 1], query[i - 1]);
+            const int sub = mmatrix(i - 1, j - 1) +
+                            _penalties.subs(target[j - 1], query[i - 1]);
 
             imatrix(i, j) = ins;
             dmatrix(i, j) = del;
@@ -143,7 +145,8 @@ void DPAligner::align_dgaffine(std::string_view target, std::string_view query) 
                 dmatrix2(i - 1, j) + _penalties.gape2(),
             });
 
-            const int sub = mmatrix(i - 1, j - 1) + subs(target[j - 1], query[i - 1]);
+            const int sub = mmatrix(i - 1, j - 1) +
+                            _penalties.subs(target[j - 1], query[i - 1]);
 
             imatrix(i, j) = ins1;
             imatrix2(i, j) = ins2;
@@ -407,7 +410,6 @@ std::string DPAligner::traceback_dgaffine(std::string_view target, std::string_v
 }
 
 std::string DPAligner::align(std::string_view target, std::string_view query) {
-
     // We always want the bigger sequence on the left.
     bool swapped = false;
     if (target.size() > query.size()) {

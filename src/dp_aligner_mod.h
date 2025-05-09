@@ -92,13 +92,16 @@ private:
     std::string traceback_dgaffine(std::string_view target, std::string_view query);
 
     /**
-     * Get the score of the substitution between two characters.
+     * Add @p l characters @p c to the end of the CIGAR string @p cigar.
      *
-     * @param t The target character.
-     * @param q The query character.
+     * @param cigar A pointer to the CIGAR string.
+     * @param c The character to push.
+     * @param l The number of times to push the character.
      */
-    inline int subs(char t, char q) const {
-        return (t == q) ? _penalties.match() : _penalties.mismatch();
+    void push_to_cigar(char *cigar, char c, int l) {
+        for (int i = 0; i < l; ++i) {
+            cigar[i] = c;
+        }
     }
 
     Penalties _penalties;

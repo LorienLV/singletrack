@@ -58,7 +58,8 @@ void DPAlignerMod::align_glinear(std::string_view target, std::string_view query
         for (int j = 1; j < std::ssize(target) + 1; ++j) {
             const int ins = mmatrix(i, j - 1) + _penalties.gape();
             const int del = mmatrix(i - 1, j) + _penalties.gape();
-            const int sub = mmatrix(i - 1, j - 1) + subs(target[j - 1], query[i - 1]);
+            const int sub = mmatrix(i - 1, j - 1) +
+                            _penalties.subs(target[j - 1], query[i - 1]);
 
             mmatrix(i, j) = std::max({ins, del, sub});
         }
@@ -87,7 +88,8 @@ void DPAlignerMod::align_gaffine(std::string_view target, std::string_view query
                 _drow[j] + _penalties.gape()
             });
 
-            const int sub = mmatrix(i - 1, j - 1) + subs(target[j - 1], query[i - 1]);
+            const int sub = mmatrix(i - 1, j - 1) +
+                            _penalties.subs(target[j - 1], query[i - 1]);
 
             _icell = ins;
             _drow[j] = del;
@@ -130,7 +132,8 @@ void DPAlignerMod::align_dgaffine(std::string_view target, std::string_view quer
                 _drow2[j] + _penalties.gape2()
             });
 
-            const int sub = mmatrix(i - 1, j - 1) + subs(target[j - 1], query[i - 1]);
+            const int sub = mmatrix(i - 1, j - 1) +
+                            _penalties.subs(target[j - 1], query[i - 1]);
 
             _icell = ins1;
             _icell2 = ins2;
@@ -193,8 +196,6 @@ std::string DPAlignerMod::traceback_gaffine(std::string_view target, std::string
     int i = static_cast<int>(std::ssize(query));
     int j = static_cast<int>(std::ssize(target));
 
-    int nindels = 0;
-
     char ins_char = 'I';
     char del_char = 'D';
 
@@ -203,6 +204,8 @@ std::string DPAlignerMod::traceback_gaffine(std::string_view target, std::string
     }
 
     bool in_mmatrix = true;
+
+    int l = 0; // Length of the gap.
 
     std::string cigar;
     cigar.resize_and_overwrite(target.size() + query.size(), [&](char* buf, size_t size) {
@@ -214,7 +217,7 @@ std::string DPAlignerMod::traceback_gaffine(std::string_view target, std::string
             if (in_mmatrix) {
                 if (i > 0 && j > 0 &&
                     mmatrix(i, j) == mmatrix(i - 1, j - 1) +
-                                     subs(target[j - 1], query[i - 1])) {
+                                     _penalties.subs(target[j - 1], query[i - 1])) {
 
                     buf[idx] = (target[j - 1] == query[i - 1]) ? 'M' : 'X';
 
@@ -228,50 +231,33 @@ std::string DPAlignerMod::traceback_gaffine(std::string_view target, std::string
 
                     // Freeze i and j. We are in either I or D. Find a coherent path
                     // back to M.
-                    nindels = 0;
+                    l = 0;
                 }
             }
             else {
-                auto find_path_back_to_m = [&](const int new_i,
-                                               const int new_j,
-                                               const int expected_score,
-                                               const char indel_char) {
+                ++l;
 
-                    if (new_i < 0 || new_j < 0) {
-                        return false;
-                    }
+                const int back_to_m_score = mmatrix(i, j) - _penalties.gapo() -
+                                            l * _penalties.gape();
 
-                    if (expected_score != mmatrix(new_i, new_j)) {
-                        return false;
-                    }
+                if (i - l >= 0 && back_to_m_score == mmatrix(i - l, j)) {
+                    push_to_cigar(buf + idx, ins_char, l);
+                    idx += l;
 
-                    i = new_i;
-                    j = new_j;
+                    i = i - l;
 
                     in_mmatrix = true;
 
-                    for (int k = 0; k < nindels; ++k) {
-                        buf[idx] = indel_char;
-                        idx += 1;
-                    }
-
-                    return true;
-                };
-
-                ++nindels;
-
-                const int indel_i = i - nindels;
-                const int indel_j = j - nindels;
-                const int back_to_m_score = mmatrix(i, j) -
-                                            nindels * _penalties.gape() -
-                                            _penalties.gapo();
-
-                if (find_path_back_to_m(i, indel_j, back_to_m_score, ins_char)) {
-                    // Ins path.
                     continue;
                 }
-                else if (find_path_back_to_m(indel_i, j, back_to_m_score, del_char)) {
-                    // Del path.
+                else if (j - l >= 0 && back_to_m_score == mmatrix(i, j - l)) {
+                    push_to_cigar(buf + idx, del_char, l);
+                    idx += l;
+
+                    j = j - l;
+
+                    in_mmatrix = true;
+
                     continue;
                 }
             }
@@ -290,8 +276,6 @@ std::string DPAlignerMod::traceback_dgaffine(std::string_view target, std::strin
     int i = static_cast<int>(std::ssize(query));
     int j = static_cast<int>(std::ssize(target));
 
-    int nindels = 0;
-
     char ins_char = 'I';
     char del_char = 'D';
 
@@ -300,6 +284,8 @@ std::string DPAlignerMod::traceback_dgaffine(std::string_view target, std::strin
     }
 
     bool in_mmatrix = true;
+
+    int l = 0; // Length of the gap.
 
     std::string cigar;
     cigar.resize_and_overwrite(target.size() + query.size(), [&](char* buf, size_t size) {
@@ -311,7 +297,7 @@ std::string DPAlignerMod::traceback_dgaffine(std::string_view target, std::strin
             if (in_mmatrix) {
                 if (i > 0 && j > 0 &&
                     mmatrix(i, j) == mmatrix(i - 1, j - 1) +
-                                     subs(target[j - 1], query[i - 1])) {
+                                     _penalties.subs(target[j - 1], query[i - 1])) {
 
                     buf[idx] = (target[j - 1] == query[i - 1]) ? 'M' : 'X';
 
@@ -325,60 +311,55 @@ std::string DPAlignerMod::traceback_dgaffine(std::string_view target, std::strin
 
                     // Freeze i and j. We are in either I1, I2, D1 or D2.
                     // Find a coherent path back to M.
-                    nindels = 0;
+                    l = 0;
                 }
             }
             else {
-                auto find_path_back_to_m = [&](const int new_i,
-                                               const int new_j,
-                                               const int expected_score,
-                                               const char indel_char) {
-                    if (new_i < 0 || new_j < 0) {
-                        return false;
-                    }
+                ++l;
 
-                    if (expected_score != mmatrix(new_i, new_j)) {
-                        return false;
-                    }
+                const int back_to_m_score1 = mmatrix(i, j) - _penalties.gapo() -
+                                            l * _penalties.gape();
+                const int back_to_m_score2 = mmatrix(i, j) - _penalties.gapo2() -
+                                            l * _penalties.gape2();
 
-                    i = new_i;
-                    j = new_j;
+                if (i - l >= 0 && back_to_m_score1 == mmatrix(i - l, j)) {
+                    push_to_cigar(buf + idx, ins_char, l);
+                    idx += l;
+
+                    i = i - l;
 
                     in_mmatrix = true;
 
-                    for (int k = 0; k < nindels; ++k) {
-                        buf[idx] = indel_char;
-                        idx += 1;
-                    }
-
-                    return true;
-                };
-
-                ++nindels;
-
-                const int indel_i = i - nindels;
-                const int indel_j = j - nindels;
-                const int back_to_m_score1 = mmatrix(i, j) -
-                                            nindels * _penalties.gape() -
-                                            _penalties.gapo();
-                const int back_to_m_score2 = mmatrix(i, j) -
-                                            nindels * _penalties.gape2() -
-                                            _penalties.gapo2();
-
-                if (find_path_back_to_m(i, indel_j, back_to_m_score1, ins_char)) {
-                    // Ins1 path.
                     continue;
                 }
-                else if (find_path_back_to_m(indel_i, j, back_to_m_score1, del_char)) {
-                    // Del1 path.
+                else if (j - l >= 0 && back_to_m_score1 == mmatrix(i, j - l)) {
+                    push_to_cigar(buf + idx, del_char, l);
+                    idx += l;
+
+                    j = j - l;
+
+                    in_mmatrix = true;
+
                     continue;
                 }
-                else if (find_path_back_to_m(i, indel_j, back_to_m_score2, ins_char)) {
-                    // Ins2 path.
+                else if (i - l >= 0 && back_to_m_score2 == mmatrix(i - l, j)) {
+                    push_to_cigar(buf + idx, ins_char, l);
+                    idx += l;
+
+                    i = i - l;
+
+                    in_mmatrix = true;
+
                     continue;
                 }
-                else if (find_path_back_to_m(indel_i, j, back_to_m_score2, del_char)) {
-                    // Del2 path.
+                else if (j - l >= 0 && back_to_m_score2 == mmatrix(i, j - l)) {
+                    push_to_cigar(buf + idx, del_char, l);
+                    idx += l;
+
+                    j = j - l;
+
+                    in_mmatrix = true;
+
                     continue;
                 }
             }
@@ -393,7 +374,6 @@ std::string DPAlignerMod::traceback_dgaffine(std::string_view target, std::strin
 }
 
 std::string DPAlignerMod::align(std::string_view target, std::string_view query) {
-
     // We always want the bigger sequence on the left.
     bool swapped = false;
     if (target.size() > query.size()) {

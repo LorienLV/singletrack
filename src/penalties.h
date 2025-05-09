@@ -57,6 +57,16 @@ public:
     // TODO:
     int gapo2() const { return _gapo2; }
 
+    /**
+     * Get the score of the substitution between two characters.
+     *
+     * @param t The target character.
+     * @param q The query character.
+     */
+    int subs(char t, char q) const {
+        return (t == q) ? _match : _mismatch;
+    }
+
 private:
     Type _type;
 
