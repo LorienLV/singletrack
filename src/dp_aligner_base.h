@@ -6,11 +6,11 @@
 #include "alignment.h"
 #include "penalties.h"
 
-class DPAlignerMod {
+class DPAlignerBase {
 public:
     /**
-     * Create a DPAlignerMod instance with the given penalties that will allocate
-     * space to align sequences one of them with a maximum size of @p
+     * Create a DPAlignerBase instance with the given penalties that will
+     * allocate space to align sequences one of them with a maximum size of @p
      * max_size1 and the other with a maximum size of @p max_size2. It
      * does not matter which sequence is the target and which is the query.
      *
@@ -18,9 +18,7 @@ public:
      * @param max_size1 The maximum size of one of the sequences.
      * @param max_size2 The maximum size of the other sequence.
      */
-    DPAlignerMod(const Penalties &penalties,
-                 int max_size1,
-                 int max_size2);
+    DPAlignerBase(const Penalties &penalties, int max_size1, int max_size2);
 
     /**
      * Align the target and query sequences using the Dynamic Programming.
@@ -33,6 +31,12 @@ public:
      */
     std::string align(std::string_view target, std::string_view query);
 
+    /**
+     * Get the size in bytes of all the matrices used by the DPAlignerBase object.
+     *
+     * @return The size in bytes of the DPAlignerBase object.
+     */
+    int memory_usage();
 private:
     /**
      * Alignment function for gap-linear penalties.
@@ -91,19 +95,6 @@ private:
     template <bool swapped>
     std::string traceback_dgaffine(std::string_view target, std::string_view query);
 
-    /**
-     * Add @p l characters @p c to the end of the CIGAR string @p cigar.
-     *
-     * @param cigar A pointer to the CIGAR string.
-     * @param c The character to push.
-     * @param l The number of times to push the character.
-     */
-    void push_to_cigar(char *cigar, char c, int l) {
-        for (int i = 0; i < l; ++i) {
-            cigar[i] = c;
-        }
-    }
-
     Penalties _penalties;
 
     int _max_size_target;
@@ -112,6 +103,15 @@ private:
     std::vector<int> _mmatrix;
     int &mmatrix(int i, int j) { return _mmatrix[i * (_max_size_target + 1) + j]; }
 
-    std::vector<int> _drow;
-    std::vector<int> _drow2;
+    std::vector<int> _imatrix;
+    int &imatrix(int i, int j) { return _imatrix[i * (_max_size_target + 1) + j]; }
+
+    std::vector<int> _dmatrix;
+    int &dmatrix(int i, int j) { return _dmatrix[i * (_max_size_target + 1) + j]; }
+
+    std::vector<int> _imatrix2;
+    int &imatrix2(int i, int j) { return _imatrix2[i * (_max_size_target + 1) + j]; }
+
+    std::vector<int> _dmatrix2;
+    int &dmatrix2(int i, int j) { return _dmatrix2[i * (_max_size_target + 1) + j]; }
 };

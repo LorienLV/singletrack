@@ -1,12 +1,12 @@
-#include "dp_aligner.h"
+#include "dp_aligner_base.h"
 
 #include <algorithm>
 #include <iostream>
 #include <limits>
 
-DPAligner::DPAligner(const Penalties& penalties,
-                     const int max_size1,
-                     const int max_size2)
+DPAlignerBase::DPAlignerBase(const Penalties& penalties,
+                             const int max_size1,
+                             const int max_size2)
     : _penalties(penalties),
       // We want the bigger sequence on the left.
       _max_size_target(std::min(max_size1, max_size2)),
@@ -34,11 +34,11 @@ DPAligner::DPAligner(const Penalties& penalties,
     }
     else if (_penalties.type() == Penalties::Type::DualAffine) {
         for (int j = 1; j < _max_size_target + 1; ++j) {
-            mmatrix(0, j) = std::max(_penalties.gapo() + j * _penalties.gape(),
+            mmatrix(0, j) = std::min(_penalties.gapo() + j * _penalties.gape(),
                                      _penalties.gapo2() + j * _penalties.gape2());
         }
         for (int i = 1; i < _max_size_query + 1; ++i) {
-            mmatrix(i, 0) = std::max(_penalties.gapo() + i * _penalties.gape(),
+            mmatrix(i, 0) = std::min(_penalties.gapo() + i * _penalties.gape(),
                                      _penalties.gapo2() + i * _penalties.gape2());
         }
     }
@@ -84,7 +84,15 @@ DPAligner::DPAligner(const Penalties& penalties,
     }
 }
 
-void DPAligner::align_glinear(std::string_view target, std::string_view query) {
+int DPAlignerBase::memory_usage() {
+    return _mmatrix.capacity() * sizeof(_mmatrix[0]) +
+           _imatrix.capacity() * sizeof(_imatrix[0]) +
+           _dmatrix.capacity() * sizeof(_dmatrix[0]) +
+           _imatrix2.capacity() * sizeof(_imatrix2[0]) +
+           _dmatrix2.capacity() * sizeof(_dmatrix2[0]);
+}
+
+void DPAlignerBase::align_glinear(std::string_view target, std::string_view query) {
     for (int i = 1; i < std::ssize(query) + 1; ++i) {
         for (int j = 1; j < std::ssize(target) + 1; ++j) {
             const int ins = mmatrix(i, j - 1) + _penalties.gape();
@@ -92,21 +100,21 @@ void DPAligner::align_glinear(std::string_view target, std::string_view query) {
             const int sub = mmatrix(i - 1, j - 1) +
                             _penalties.subs(target[j - 1], query[i - 1]);
 
-            mmatrix(i, j) = std::max({ins, del, sub});
+            mmatrix(i, j) = std::min({ins, del, sub});
         }
     }
 }
 
-void DPAligner::align_gaffine(std::string_view target, std::string_view query) {
+void DPAlignerBase::align_gaffine(std::string_view target, std::string_view query) {
     for (int i = 1; i < std::ssize(query) + 1; ++i) {
         for (int j = 1; j < std::ssize(target) + 1; ++j) {
 
-            const int ins = std::max({
+            const int ins = std::min({
                 mmatrix(i, j - 1) + _penalties.gapo() + _penalties.gape(),
                 imatrix(i, j - 1) + _penalties.gape(),
             });
 
-            const int del = std::max({
+            const int del = std::min({
                 mmatrix(i - 1, j) + _penalties.gapo() + _penalties.gape(),
                 dmatrix(i - 1, j) + _penalties.gape(),
             });
@@ -116,31 +124,31 @@ void DPAligner::align_gaffine(std::string_view target, std::string_view query) {
 
             imatrix(i, j) = ins;
             dmatrix(i, j) = del;
-            mmatrix(i, j) = std::max({sub, ins, del});
+            mmatrix(i, j) = std::min({sub, ins, del});
         }
     }
 }
 
-void DPAligner::align_dgaffine(std::string_view target, std::string_view query) {
+void DPAlignerBase::align_dgaffine(std::string_view target, std::string_view query) {
     for (int i = 1; i < std::ssize(query) + 1; ++i) {
         for (int j = 1; j < std::ssize(target) + 1; ++j) {
 
-            const int ins1 = std::max({
+            const int ins1 = std::min({
                 mmatrix(i, j - 1) + _penalties.gapo() + _penalties.gape(),
                 imatrix(i, j - 1) + _penalties.gape(),
             });
 
-            const int ins2 = std::max({
+            const int ins2 = std::min({
                 mmatrix(i, j - 1) + _penalties.gapo2() + _penalties.gape2(),
                 imatrix2(i, j - 1) + _penalties.gape2(),
             });
 
-            const int del1 = std::max({
+            const int del1 = std::min({
                 mmatrix(i - 1, j) + _penalties.gapo() + _penalties.gape(),
                 dmatrix(i - 1, j) + _penalties.gape(),
             });
 
-            const int del2 = std::max({
+            const int del2 = std::min({
                 mmatrix(i - 1, j) + _penalties.gapo2() + _penalties.gape2(),
                 dmatrix2(i - 1, j) + _penalties.gape2(),
             });
@@ -152,13 +160,14 @@ void DPAligner::align_dgaffine(std::string_view target, std::string_view query) 
             imatrix2(i, j) = ins2;
             dmatrix(i, j) = del1;
             dmatrix2(i, j) = del2;
-            mmatrix(i, j) = std::max({sub, ins1, ins2, del1, del2});
+            mmatrix(i, j) = std::min({sub, ins1, ins2, del1, del2});
         }
     }
 }
 
 template <bool swapped>
-std::string DPAligner::traceback_glinear(std::string_view target, std::string_view query) {
+std::string DPAlignerBase::traceback_glinear(std::string_view target,
+                                             std::string_view query) {
     int i = static_cast<int>(std::ssize(query));
     int j = static_cast<int>(std::ssize(target));
 
@@ -208,7 +217,8 @@ std::string DPAligner::traceback_glinear(std::string_view target, std::string_vi
 }
 
 template <bool swapped>
-std::string DPAligner::traceback_gaffine(std::string_view target, std::string_view query) {
+std::string DPAlignerBase::traceback_gaffine(std::string_view target,
+                                             std::string_view query) {
     enum class Matrix {
         M,
         I,
@@ -289,7 +299,8 @@ std::string DPAligner::traceback_gaffine(std::string_view target, std::string_vi
 }
 
 template <bool swapped>
-std::string DPAligner::traceback_dgaffine(std::string_view target, std::string_view query) {
+std::string DPAlignerBase::traceback_dgaffine(std::string_view target,
+                                              std::string_view query) {
     enum class Matrix {
         M,
         I1,
@@ -306,6 +317,13 @@ std::string DPAligner::traceback_dgaffine(std::string_view target, std::string_v
     std::string cigar;
     cigar.resize_and_overwrite(target.size() + query.size(), [&](char* buf, size_t size) {
         (void)size; // Unused.
+
+        char ins_char = 'I';
+        char del_char = 'D';
+
+        if constexpr (swapped) {
+            std::swap(ins_char, del_char);
+        }
 
         int idx = 0;
 
@@ -337,13 +355,7 @@ std::string DPAligner::traceback_dgaffine(std::string_view target, std::string_v
                     curr_matrix = Matrix::M;
                 }
 
-                if constexpr (swapped) {
-                    buf[idx] = 'D';
-                }
-                else {
-                    buf[idx] = 'I';
-                }
-
+                buf[idx] = ins_char;
                 idx += 1;
 
                 j -= 1;
@@ -353,13 +365,7 @@ std::string DPAligner::traceback_dgaffine(std::string_view target, std::string_v
                     curr_matrix = Matrix::M;
                 }
 
-                if constexpr (swapped) {
-                    buf[idx] = 'D';
-                }
-                else {
-                    buf[idx] = 'I';
-                }
-
+                buf[idx] = ins_char;
                 idx += 1;
 
                 j -= 1;
@@ -369,13 +375,7 @@ std::string DPAligner::traceback_dgaffine(std::string_view target, std::string_v
                     curr_matrix = Matrix::M;
                 }
 
-                if constexpr (swapped) {
-                    buf[idx] = 'I';
-                }
-                else {
-                    buf[idx] = 'D';
-                }
-
+                buf[idx] = del_char;
                 idx += 1;
 
                 i -= 1;
@@ -385,13 +385,7 @@ std::string DPAligner::traceback_dgaffine(std::string_view target, std::string_v
                     curr_matrix = Matrix::M;
                 }
 
-                if constexpr (swapped) {
-                    buf[idx] = 'I';
-                }
-                else {
-                    buf[idx] = 'D';
-                }
-
+                buf[idx] = del_char;
                 idx += 1;
 
                 i -= 1;
@@ -409,7 +403,7 @@ std::string DPAligner::traceback_dgaffine(std::string_view target, std::string_v
     return cigar;
 }
 
-std::string DPAligner::align(std::string_view target, std::string_view query) {
+std::string DPAlignerBase::align(std::string_view target, std::string_view query) {
     // We always want the bigger sequence on the left.
     bool swapped = false;
     if (target.size() > query.size()) {

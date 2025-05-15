@@ -5,7 +5,8 @@
 #include <vector>
 
 /**
- * A class containing the penalties for the alignment algorithm.
+ * A class containing the penalties for the alignment algorithm. The objective
+ * is always to minimize the score.
  *
  */
 
@@ -17,18 +18,40 @@ public:
         DualAffine
     };
 
-    // TODO: Linear
+    /**
+     * Create a gap-linear penalties object.
+     *
+     * @param match The match score.
+     * @param mismatch The mismatch score.
+     * @param gape The gap extension penalty.
+     */
     Penalties(int match,
               int mismatch,
               int gape);
 
-    // TODO: Affine
+    /**
+     * Create a gap-affine penalties object.
+     *
+     * @param match The match score.
+     * @param mismatch The mismatch score.
+     * @param gapo The gap open penalty.
+     * @param gape The gap extension penalty.
+     */
     Penalties(int match,
               int mismatch,
               int gapo,
               int gape);
 
-    // TODO: Dual affine
+    /**
+     * Create a dual gap-affine penalties object.
+     *
+     * @param match The match score.
+     * @param mismatch The mismatch score.
+     * @param gapo The first gap open penalty.
+     * @param gape The first gap extension penalty.
+     * @param gapo2 The second gap open penalty.
+     * @param gape2 The second gap extension penalty.
+     */
     Penalties(int match,
               int mismatch,
               int gapo,
@@ -36,25 +59,55 @@ public:
               int gapo2,
               int gape2);
 
-    // TODO:
+    /**
+     * Get the type of penalties.
+     *
+     * @return The type of penalties.
+     */
     Type type() const { return _type; }
 
-    // TODO:
+    /**
+     * Get the match score.
+     *
+     * @return The match score.
+     */
     int match() const { return _match; }
 
-    // TODO:
+    /**
+     * Get the mismatch score.
+     *
+     * @return The mismatch score.
+     */
     int mismatch() const { return _mismatch; }
 
-    // TODO:
+    /**
+     * Get the gap open penalty.
+     *
+     * @return The gap open penalty.
+     */
     int gape() const { return _ins; }
 
-    // TODO:
+    /**
+     * Get the gap extension penalty. If type is Linear, this function returns 0.
+     *
+     * @return The gap extension penalty.
+     */
     int gapo() const { return _gapo; }
 
-    // TODO:
+    /**
+     * Get the gap extension penalty for dual gap-affine. If type is Linear or
+     * Affine, this function returns 0.
+     *
+     * @return The gap extension penalty for dual gap-affine.
+     */
     int gape2() const { return _ins2; }
 
-    // TODO:
+    /**
+     * Get the gap open penalty for dual gap-affine. If type is Linear or Affine,
+     * this function returns 0.
+     *
+     * @return The gap open penalty for dual gap-affine.
+     */
     int gapo2() const { return _gapo2; }
 
     /**

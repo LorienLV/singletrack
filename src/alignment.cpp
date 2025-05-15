@@ -5,6 +5,46 @@
 
 namespace alignment {
 
+bool cigar_coherent(std::string_view cigar,
+                    std::string_view target,
+                    std::string_view query) {
+
+    int target_idx = 0;
+    int query_idx = 0;
+
+    for (int i = 0; i < std::ssize(cigar); i++) {
+        char op = cigar[i];
+
+        if (op == 'M' || op == '=') {
+            if (target[target_idx] != query[query_idx]) {
+                return false;
+            }
+            target_idx += 1;
+            query_idx += 1;
+        }
+        else if (op == 'X') {
+            if (target[target_idx] == query[query_idx]) {
+                return false;
+            }
+            target_idx += 1;
+            query_idx += 1;
+        }
+        else if (op == 'I') {
+            target_idx += 1;
+        }
+        else if (op == 'D') {
+            query_idx += 1;
+        }
+    }
+
+    if (target_idx == target.size() && query_idx == query.size()) {
+        return true;
+    }
+    else {
+        return false;
+    }
+}
+
 int cigar_score(const Penalties &penalties, const std::string_view cigar) {
 
     int score = 0;
@@ -20,7 +60,7 @@ int cigar_score(const Penalties &penalties, const std::string_view cigar) {
         if ((prev_op == 'I' || prev_op == 'D') && op != prev_op &&
             penalties.type() == Penalties::Type::DualAffine) {
             // We have finished a chain of gaps, get the best score.
-            score = std::max(score, score2);
+            score = std::min(score, score2);
         }
 
         if (op == 'M' || op == '=') {
@@ -64,10 +104,50 @@ int cigar_score(const Penalties &penalties, const std::string_view cigar) {
     // In case the sequence ends with a gap.
     if ((cigar.back() == 'I' || cigar.back() == 'D') &&
         penalties.type() == Penalties::Type::DualAffine) {
-        score = std::max(score, score2);
+        score = std::min(score, score2);
     }
 
     return score;
+}
+
+bool alignment_coherent(std::string_view target_alignment,
+    std::string_view query_alignment,
+    std::string_view target,
+    std::string_view query) {
+
+    if (target_alignment.size() != query_alignment.size()) {
+        return false;
+    }
+
+    int target_idx = 0;
+    int query_idx = 0;
+
+    for (int i = 0; i < std::ssize(target_alignment); i++) {
+        if (target_alignment[i] == '-' && query_alignment[i] == '-') {
+            return false;
+        }
+        else if (target_alignment[i] == '-') {
+            query_idx += 1;
+        }
+        else if (query_alignment[i] == '-') {
+            target_idx += 1;
+        }
+        else {
+            // No gaps.
+            if (target_alignment[i] != target[target_idx] ||
+                query_alignment[i] != query[query_idx]) {
+                return false;
+            }
+            target_idx += 1;
+            query_idx += 1;
+        }
+    }
+
+    if (target_idx != target.size() || query_idx != query.size()) {
+        return false;
+    }
+
+    return true;
 }
 
 int alignment_score(const Penalties &penalties,
@@ -86,7 +166,7 @@ int alignment_score(const Penalties &penalties,
             query_alignment[i] != '-' &&
             penalties.type() == Penalties::Type::DualAffine) {
             // We have finished a chain of gaps, get the best score.
-            score = std::max(score, score2);
+            score = std::min(score, score2);
         }
 
         if (target_alignment[i] == query_alignment[i]) {
@@ -124,7 +204,7 @@ int alignment_score(const Penalties &penalties,
     if ((target_alignment.back() == '-' || query_alignment.back() == '-') &&
         penalties.type() == Penalties::Type::DualAffine) {
         // We have finished a chain of gaps, get the best score.
-        score = std::max(score, score2);
+        score = std::min(score, score2);
     }
 
     return score;
@@ -200,16 +280,6 @@ std::pair<std::string, std::string> cigar_to_alignment(std::string_view cigar,
     return {target_alignment, query_alignment};
 }
 
-void cigar_to_alignment(std::string_view cigar,
-                        std::string_view target,
-                        std::string_view query,
-                        char *target_alignment,
-                        char *query_alignment) {
-
-    cigar_to_alignment_impl<true>(cigar, target, target_alignment);
-    cigar_to_alignment_impl<false>(cigar, query, query_alignment);
-}
-
 namespace {
 /**
  * Transform an alignment into a CIGAR string and store the result in the buffer
@@ -258,12 +328,6 @@ std::string alignment_to_cigar(const std::string_view target_alignment,
     });
 
     return cigar;
-}
-
-void alignment_to_cigar(std::string_view target_alignment,
-                        std::string_view query_alignment,
-                        char *cigar) {
-    alignment_to_cigar_impl(target_alignment, query_alignment, cigar);
 }
 
 }   // namespace alignment

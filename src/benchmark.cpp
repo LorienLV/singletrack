@@ -10,32 +10,35 @@
 
 #include "alignment.h"
 #include "penalties.h"
-#include "dp_aligner.h"
-#include "dp_aligner_mod.h"
-
-#define PRINT_ALIGNMENTS 0
+#include "dp_aligner_base.h"
+#include "dp_aligner_singletrack.h"
 
 struct CMDArgs {
+    bool verbose = false;
+
     std::string dataset = "";
+
     int match = 0;
-    int mismatch = -1;
-    int gapo = -1;
+    int mismatch = 1;
+    int gapo = 1234;
     bool gapo_set = false;
-    int gape = -1;
-    int gapo2 = -1;
+    int gape = 1;
+    int gapo2 = 1234;
     bool gapo2_set = false;
-    int gape2 = -1;
+    int gape2 = 1234;
     bool gape2_set = false;
 };
 
 void help() {
     std::cout << "Usage: benchmark [OPTIONS]\n"
                  "Options:\n"
+                 "  -v, --verbose         Verbose output, i.e., print alignments "
+                                         "and scores\n"
                  "  -d, --dataset <file>  Dataset file\n"
                  "  --match <int>         The match score [default=0]\n"
-                 "  --mismatch <int>      The mismatch score [default=-1]\n"
+                 "  --mismatch <int>      The mismatch score [default=1]\n"
                  "  --gapo <int>          The gap open penalty (Optional)\n"
-                 "  --gape <int>          The gap extension penalty [default=-1]\n"
+                 "  --gape <int>          The gap extension penalty [default=1]\n"
                  "  --gapo2 <int>         The second gap open penalty for dual "
                                          "gap-affine (Optional)\n"
                  "  --gape2 <int>         The second gap extension penalty for "
@@ -43,7 +46,8 @@ void help() {
 }
 
 CMDArgs parse_args(int argc, char *const *argv) {
-    static const option long_options[] = {{"dataset", required_argument, 0, 'd'},
+    static const option long_options[] = {{"verbose", no_argument, 0, 'v'},
+                                          {"dataset", required_argument, 0, 'd'},
                                           {"match", required_argument, 0, 0},
                                           {"mismatch", required_argument, 0, 0},
                                           {"gapo", required_argument, 0, 0},
@@ -56,8 +60,11 @@ CMDArgs parse_args(int argc, char *const *argv) {
 
     int opt;
     int option_index = 0;
-    while ((opt = getopt_long(argc, argv, "d:", long_options, &option_index)) != -1) {
+    while ((opt = getopt_long(argc, argv, "vd:", long_options, &option_index)) != -1) {
         switch (opt) {
+            case 'v':
+                args.verbose = true;
+                break;
             case 'd':
                 args.dataset = optarg;
                 break;
@@ -105,7 +112,6 @@ int main(int argc, char *const *argv) {
 
     if (!dataset.is_open()) {
         std::cerr << "Could not open dataset file\n";
-        help();
         return 1;
     }
 
@@ -143,20 +149,20 @@ int main(int argc, char *const *argv) {
     }
 
     if (penalties->type() == Penalties::Type::Linear) {
-        std::cout << "--- Using Gap-Linear ---\n";
+        std::cout << "*** Using gap-linear ***\n";
         std::cout << "  Match: " << penalties->match() << "\n";
         std::cout << "  Mismatch: " << penalties->mismatch() << "\n";
         std::cout << "  Gap extension: " << penalties->gape() << "\n";
     }
     else if (penalties->type() == Penalties::Type::Affine) {
-        std::cout << "--- Using Gap-Affine ---\n";
+        std::cout << "*** Using gap-affine ***\n";
         std::cout << "  Match: " << penalties->match() << "\n";
         std::cout << "  Mismatch: " << penalties->mismatch() << "\n";
         std::cout << "  Gap open: " << penalties->gapo() << "\n";
         std::cout << "  Gap extension: " << penalties->gape() << "\n";
     }
     else {
-        std::cout << "--- Using Dual Gap-Affine ---\n";
+        std::cout << "*** Using dual gap-affine ***\n";
         std::cout << "  Match: " << penalties->match() << "\n";
         std::cout << "  Mismatch: " << penalties->mismatch() << "\n";
         std::cout << "  Gap open 1: " << penalties->gapo() << "\n";
@@ -187,8 +193,8 @@ int main(int argc, char *const *argv) {
     dataset.clear();
     dataset.seekg(0, std::ios::beg);
 
-    DPAligner dpa(*penalties, max_size_target, max_size_query);
-    DPAlignerMod dpa_mod(*penalties, max_size_target, max_size_query);
+    DPAlignerBase dpa_base(*penalties, max_size_target, max_size_query);
+    DPAlignerSingletrack dpa_singletrack(*penalties, max_size_target, max_size_query);
 
     std::string target;
     target.reserve(max_size_target);
@@ -196,9 +202,10 @@ int main(int argc, char *const *argv) {
     std::string query;
     query.reserve(max_size_query);
 
-    std::chrono::duration<double> dp_time(0);
-    std::chrono::duration<double> dp_mod_time(0);
+    std::chrono::duration<double> dp_base_time(0);
+    std::chrono::duration<double> dp_singletrack_time(0);
 
+    int cnt = 0;
     while (!dataset.eof()) {
         std::getline(dataset, target);
         std::getline(dataset, query);
@@ -210,56 +217,104 @@ int main(int argc, char *const *argv) {
         std::string_view target_view(target.data() + 1, target.size() - 1);
         std::string_view query_view(query.data() + 1, query.size() - 1);
 
-        // Traditional DP.
+        // ---------------------- Traditional DP ---------------------- //
 
-        const auto start_dp = std::chrono::high_resolution_clock::now();
+        const auto start_dp_base = std::chrono::high_resolution_clock::now();
 
-        const auto dpa_cigar = dpa.align(target_view, query_view);
+        const auto dpa_base_cigar = dpa_base.align(target_view, query_view);
 
-        const auto end_dp = std::chrono::high_resolution_clock::now();
-        dp_time += end_dp - start_dp;
+        const auto end_dp_base = std::chrono::high_resolution_clock::now();
+        dp_base_time += end_dp_base - start_dp_base;
 
-        const std::string_view dpa_cigar_view(dpa_cigar.data(), dpa_cigar.size());
+        // ---------------------- Singletrack DP ---------------------- //
 
-        const auto dpa_alignment = alignment::cigar_to_alignment(dpa_cigar_view,
-                                                                 target_view,
+        const auto start_dp_singletrack = std::chrono::high_resolution_clock::now();
+
+        const auto dpa_singletrack_cigar = dpa_singletrack.align(target_view,
                                                                  query_view);
 
-        const auto dpa_score = alignment::cigar_score(*penalties, dpa_cigar_view);
+        const auto end_dp_singletrack = std::chrono::high_resolution_clock::now();
+        dp_singletrack_time += end_dp_singletrack - start_dp_singletrack;
 
-        // Modified DP.
+        // ------------------- Check the alignments ------------------- //
 
-        const auto start_dp_mod = std::chrono::high_resolution_clock::now();
+        const std::string_view dpa_cigar_view(dpa_base_cigar.data(),
+                                              dpa_base_cigar.size());
 
-        const auto dpa_mod_cigar = dpa_mod.align(target_view, query_view);
+        const auto dpa_base_score = alignment::cigar_score(*penalties, dpa_cigar_view);
 
-        const auto end_dp_mod = std::chrono::high_resolution_clock::now();
-        dp_mod_time += end_dp_mod - start_dp_mod;
+        const std::string_view dpa_singletrack_cigar_view(dpa_singletrack_cigar.data(),
+                                                          dpa_singletrack_cigar.size());
 
-        const std::string_view dpa_mod_cigar_view(dpa_mod_cigar.data(), dpa_mod_cigar.size());
+        const auto dpa_singletrack_score = alignment::cigar_score(*penalties,
+                                                                  dpa_singletrack_cigar_view);
 
-        const auto dpa_mod_alignment = alignment::cigar_to_alignment(dpa_mod_cigar_view,
-                                                                     target_view,
-                                                                     query_view);
+        if (dpa_base_score != dpa_singletrack_score ||
+            !alignment::cigar_coherent(dpa_base_cigar, target_view, query_view) ||
+            !alignment::cigar_coherent(dpa_singletrack_cigar, target_view, query_view)) {
 
-        const auto dpa_mod_score = alignment::cigar_score(*penalties, dpa_mod_cigar_view);
-
-        if (dpa_score != dpa_mod_score) {
-            std::cerr << "DPA and DPA-Mod Scores do not match\n";
-            std::cerr << "Traditional DP: " << dpa_score << "\n";
-            std::cerr << "Modified DP: " << dpa_mod_score << "\n";
+            std::cerr << "ERROR in the CIGAR of alignment " << cnt << "\n";
             return EXIT_FAILURE;
         }
 
-#if PRINT_ALIGNMENTS
-        std::cout << "Alignment:\n";
-        std::cout << dpa_alignment.first << "\n";
-        std::cout << dpa_alignment.second << "\n";
-#endif
+        const auto dpa_base_alignment =
+            alignment::cigar_to_alignment(dpa_cigar_view, target_view, query_view);
+
+        const auto dpa_singletrack_alignment =
+            alignment::cigar_to_alignment(dpa_singletrack_cigar_view,
+                                        target_view,
+                                        query_view);
+
+        bool dpa_base_alignment_coherent =
+            alignment::alignment_coherent(dpa_singletrack_alignment.first,
+                                        dpa_singletrack_alignment.second,
+                                        target_view,
+                                        query_view);
+        bool dpa_singletrack_alignment_coherent =
+            alignment::alignment_coherent(dpa_singletrack_alignment.first,
+                                        dpa_singletrack_alignment.second,
+                                        target_view,
+                                        query_view);
+
+        // Double check.
+        if (!dpa_base_alignment_coherent || !dpa_singletrack_alignment_coherent) {
+            std::cerr << "ERROR in the alignment of alignment " << cnt << "\n";
+            return EXIT_FAILURE;
+        }
+
+        // ------------------- Check the alignments ------------------- //
+
+        if (args.verbose) {
+            std::cout << "| Alignment " << cnt << " |\n";
+            std::cout << "Target: " << target << "\n";
+            std::cout << "Query: " << query << "\n";
+            std::cout << "Traditional DP CIGAR: " << dpa_base_cigar << "\n";
+            std::cout << "Singletrack DP CIGAR: " << dpa_singletrack_cigar << "\n";
+            std::cout << "Traditional DP score: " << dpa_base_score << "\n";
+            std::cout << "Singletrack DP score: " << dpa_singletrack_score << "\n";
+
+            std::cout << "Traditional DP alignment:\n";
+            std::cout << dpa_base_alignment.first << "\n";
+            std::cout << dpa_base_alignment.second << "\n";
+
+            std::cout << "Singletrack DP alignment:\n";
+            std::cout << dpa_singletrack_alignment.first << "\n";
+            std::cout << dpa_singletrack_alignment.second << "\n";
+            std::cout << "\n";
+        }
+
+        ++cnt;
     }
 
-    std::cout << "Traditional DP Time: " << dp_time.count() << "s\n";
-    std::cout << "Modified DP Time: " << dp_mod_time.count() << "s\n";
+    std::cout << "Traditional DP Time: " << dp_base_time.count() << " s\n";
+    std::cout << "Modified DP Time: " << dp_singletrack_time.count() << " s\n";
+    std::cout << "\n";
+    std::cout << "Traditional DP memory usage: "
+              << static_cast<double>(dpa_base.memory_usage()) / 1024 / 1024
+              << " MB\n";
+    std::cout << "Singletrack DP memory usage: "
+              << static_cast<double>(dpa_singletrack.memory_usage()) / 1024 / 1024
+              << " MB\n";
 
     return EXIT_SUCCESS;
 }

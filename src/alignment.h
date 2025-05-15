@@ -21,6 +21,20 @@
 namespace alignment {
 
 /**
+ * Check if the CIGAR is coherent with the target and query, i.e., all the
+ * characters in the sequences are present in the CIGAR.
+ *
+ * @param cigar The CIGAR string.
+ * @param target The target sequence.
+ * @param query The query sequence.
+ * @return true if the CIGAR is coherent with the target and query, false
+ * otherwise.
+ */
+bool cigar_coherent(std::string_view cigar,
+                    std::string_view target,
+                    std::string_view query);
+
+/**
  * Compute the score of a CIGAR given the penalties and the target and query
  * that originated the CIGAR.
  *
@@ -31,6 +45,22 @@ namespace alignment {
  * @return The score of the CIGAR.
  */
 int cigar_score(const Penalties &penalties, std::string_view cigar);
+
+/**
+ * Check if the alignment is coherent with the target and query, i.e., all the
+ * characters in the sequences are present in the alignment.
+ *
+ * @param target_alignment The target alignment.
+ * @param query_alignment The query alignment.
+ * @param target The target sequence.
+ * @param query The query sequence.
+ * @return true if the alignment is coherent with the target and query, false
+ * otherwise.
+ */
+bool alignment_coherent(std::string_view target_alignment,
+                        std::string_view query_alignment,
+                        std::string_view target,
+                        std::string_view query);
 
 /**
  * Compute the score of an alignment given the penalties. The target_alignment
@@ -61,25 +91,6 @@ std::pair<std::string, std::string> cigar_to_alignment(std::string_view cigar,
                                                        std::string_view query);
 
 /**
- * Transform a CIGAR string into an alignment. The alignment will be stored in
- * the buffers provided by the user. The target_alignment and query_alignment
- * buffers must have at least the same size as the CIGAR string. The alignments
- * will not be finished with '\0', the user knows that the alignment strings
- * have the same size as the CIGAR string.
- *
- * @param cigar The CIGAR string.
- * @param target The target sequence.
- * @param query The query sequence.
- * @param target_alignment The buffer to store the target alignment.
- * @param query_alignment The buffer to store the query alignment.
- */
-void cigar_to_alignment(std::string_view cigar,
-                        std::string_view target,
-                        std::string_view query,
-                        char *target_alignment,
-                        char *query_alignment);
-
-/**
  * Transform an alignment into a CIGAR string. The target_alignment and
  * query_alignment strings must have the same size, otherwise the function will
  * throw an exception.
@@ -90,21 +101,5 @@ void cigar_to_alignment(std::string_view cigar,
  */
 std::string alignment_to_cigar(std::string_view target_alignment,
                                std::string_view query_alignment);
-
-/**
- * Transform an alignment into a CIGAR string. The target_alignment and
- * query_alignment strings must have the same size, otherwise the function
- * will throw an exception. The CIGAR string will be stored in the buffer
- * provided by the user that must have at least the same size as the alignment
- * strings. The CIGAR string will not be finished with '\0', the user knows
- * that the CIGAR string has the same size as the alignment strings.
- *
- * @param target_alignment The target alignment.
- * @param query_alignment The query alignment.
- * @param cigar The buffer to store the CIGAR string.
- */
-void alignment_to_cigar(std::string_view target_alignment,
-                        std::string_view query_alignment,
-                        char *cigar);
 
 } // namespace alignment
