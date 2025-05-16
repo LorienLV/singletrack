@@ -32,6 +32,7 @@ struct CMDArgs {
 void help() {
     std::cout << "Usage: benchmark [OPTIONS]\n"
                  "Options:\n"
+                 "  -h, --help            Show this help message\n"
                  "  -v, --verbose         Verbose output, i.e., print alignments "
                                          "and scores\n"
                  "  -d, --dataset <file>  Dataset file\n"
@@ -46,7 +47,8 @@ void help() {
 }
 
 CMDArgs parse_args(int argc, char *const *argv) {
-    static const option long_options[] = {{"verbose", no_argument, 0, 'v'},
+    static const option long_options[] = {{"help", no_argument, 0, 'h'},
+                                          {"verbose", no_argument, 0, 'v'},
                                           {"dataset", required_argument, 0, 'd'},
                                           {"match", required_argument, 0, 0},
                                           {"mismatch", required_argument, 0, 0},
@@ -60,8 +62,11 @@ CMDArgs parse_args(int argc, char *const *argv) {
 
     int opt;
     int option_index = 0;
-    while ((opt = getopt_long(argc, argv, "vd:", long_options, &option_index)) != -1) {
+    while ((opt = getopt_long(argc, argv, "hvd:", long_options, &option_index)) != -1) {
         switch (opt) {
+            case 'h':
+                help();
+                exit(0);
             case 'v':
                 args.verbose = true;
                 break;
@@ -307,7 +312,7 @@ int main(int argc, char *const *argv) {
     }
 
     std::cout << "Traditional DP Time: " << dp_base_time.count() << " s\n";
-    std::cout << "Modified DP Time: " << dp_singletrack_time.count() << " s\n";
+    std::cout << "Singletrack DP Time: " << dp_singletrack_time.count() << " s\n";
     std::cout << "\n";
     std::cout << "Traditional DP memory usage: "
               << static_cast<double>(dpa_base.memory_usage()) / 1024 / 1024

@@ -43,13 +43,14 @@ if __name__ == '__main__':
                         help='Number of pairs to generate')
     parser.add_argument('-l', '--length', type=int, required=True,
                         help='Length of the target sequences')
-    parser.add_argument('-e', '--error', type=float, required=True,
-                        help='Error rate')
+    # parser.add_argument('-e', '--error', type=float, required=True,
+    #                     help='Error rate')
 
     args = parser.parse_args()
 
-    if args.error < 0 or args.error > 1:
-        raise ValueError('Error rate must be between 0 and 1')
+    # if args.error < 0 or args.error > 1:
+    #     raise ValueError('Error rate must be between 0 and 1')
+    error = 0.2
 
     alphabet = 'ACGT'
-    generate_dataset(alphabet, args.npairs, args.length, args.error)
+    generate_dataset(alphabet, args.npairs, args.length, error)
