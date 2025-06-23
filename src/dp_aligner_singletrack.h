@@ -109,14 +109,14 @@ private:
         }
     }
 
-    Penalties _penalties;
+    Penalties penalties_;
 
-    int _max_size_target;
-    int _max_size_query;
+    int max_size_target_;
+    int max_size_query_;
 
-    std::vector<int> _mmatrix;
-    int &mmatrix(int i, int j) { return _mmatrix[i * (_max_size_target + 1) + j]; }
+    std::vector<int> mmatrix_;
+    int &mmatrix(int i, int j) { return mmatrix_[i * (max_size_target_ + 1) + j]; }
 
-    std::vector<int> _drow;
-    std::vector<int> _drow2;
+    std::vector<int> drow_;
+    std::vector<int> drow2_;
 };

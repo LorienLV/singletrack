@@ -64,35 +64,35 @@ public:
      *
      * @return The type of penalties.
      */
-    Type type() const { return _type; }
+    Type type() const { return type_; }
 
     /**
      * Get the match score.
      *
      * @return The match score.
      */
-    int match() const { return _match; }
+    int match() const { return match_; }
 
     /**
      * Get the mismatch score.
      *
      * @return The mismatch score.
      */
-    int mismatch() const { return _mismatch; }
+    int mismatch() const { return mismatch_; }
 
     /**
      * Get the gap open penalty.
      *
      * @return The gap open penalty.
      */
-    int gape() const { return _ins; }
+    int gape() const { return ins_; }
 
     /**
      * Get the gap extension penalty. If type is Linear, this function returns 0.
      *
      * @return The gap extension penalty.
      */
-    int gapo() const { return _gapo; }
+    int gapo() const { return gapo_; }
 
     /**
      * Get the gap extension penalty for dual gap-affine. If type is Linear or
@@ -100,7 +100,7 @@ public:
      *
      * @return The gap extension penalty for dual gap-affine.
      */
-    int gape2() const { return _ins2; }
+    int gape2() const { return ins2_; }
 
     /**
      * Get the gap open penalty for dual gap-affine. If type is Linear or Affine,
@@ -108,7 +108,7 @@ public:
      *
      * @return The gap open penalty for dual gap-affine.
      */
-    int gapo2() const { return _gapo2; }
+    int gapo2() const { return gapo2_; }
 
     /**
      * Get the score of the substitution between two characters.
@@ -117,20 +117,20 @@ public:
      * @param q The query character.
      */
     int subs(char t, char q) const {
-        return (t == q) ? _match : _mismatch;
+        return (t == q) ? match_ : mismatch_;
     }
 
 private:
-    Type _type;
+    Type type_;
 
-    int _match = 0;
-    int _mismatch = 0;
+    int match_ = 0;
+    int mismatch_ = 0;
 
-    int _gapo = 0; // Gap open.
-    int _ins = 0; // Insertion.
-    int _del = 0; // Deletion.
+    int gapo_ = 0; // Gap open.
+    int ins_ = 0; // Insertion.
+    int del_ = 0; // Deletion.
 
-    int _gapo2 = 0; // Gap open for dual gap-affine.
-    int _ins2 = 0; // Insertion for dual gap-affine.
-    int _del2 = 0; // Deletion for dual gap-affine.
+    int gapo2_ = 0; // Gap open for dual gap-affine.
+    int ins2_ = 0; // Insertion for dual gap-affine.
+    int del2_ = 0; // Deletion for dual gap-affine.
 };

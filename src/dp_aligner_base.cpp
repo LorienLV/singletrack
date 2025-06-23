@@ -7,101 +7,109 @@
 DPAlignerBase::DPAlignerBase(const Penalties& penalties,
                              const int max_size1,
                              const int max_size2)
-    : _penalties(penalties),
+    : penalties_(penalties),
       // We want the bigger sequence on the left.
-      _max_size_target(std::min(max_size1, max_size2)),
-      _max_size_query(std::max(max_size1, max_size2)),
-      _mmatrix((_max_size_target + 1) * (_max_size_query + 1)) {
+      max_size_target_(std::max(max_size1, max_size2)),
+      max_size_query_(std::max(max_size1, max_size2)),
+      mmatrix_((max_size_target_ + 1) * (max_size_query_ + 1)) {
 
     // Initialize M.
     mmatrix(0, 0) = 0;
 
-    if (_penalties.type() == Penalties::Type::Linear) {
-        for (int j = 1; j < _max_size_target + 1; ++j) {
-            mmatrix(0, j) = j * _penalties.gape();
+    if (penalties_.type() == Penalties::Type::Linear) {
+        for (int j = 1; j < max_size_target_ + 1; ++j) {
+            mmatrix(0, j) = j * penalties_.gape();
         }
-        for (int i = 1; i < _max_size_query + 1; ++i) {
-            mmatrix(i, 0) = i * _penalties.gape();
-        }
-    }
-    else if (_penalties.type() == Penalties::Type::Affine) {
-        for (int j = 1; j < _max_size_target + 1; ++j) {
-            mmatrix(0, j) = _penalties.gapo() + j * _penalties.gape();
-        }
-        for (int i = 1; i < _max_size_query + 1; ++i) {
-            mmatrix(i, 0) = _penalties.gapo() + i * _penalties.gape();
+        for (int i = 1; i < max_size_query_ + 1; ++i) {
+            mmatrix(i, 0) = i * penalties_.gape();
         }
     }
-    else if (_penalties.type() == Penalties::Type::DualAffine) {
-        for (int j = 1; j < _max_size_target + 1; ++j) {
-            mmatrix(0, j) = std::min(_penalties.gapo() + j * _penalties.gape(),
-                                     _penalties.gapo2() + j * _penalties.gape2());
+    else if (penalties_.type() == Penalties::Type::Affine) {
+        for (int j = 1; j < max_size_target_ + 1; ++j) {
+            mmatrix(0, j) = penalties_.gapo() + j * penalties_.gape();
         }
-        for (int i = 1; i < _max_size_query + 1; ++i) {
-            mmatrix(i, 0) = std::min(_penalties.gapo() + i * _penalties.gape(),
-                                     _penalties.gapo2() + i * _penalties.gape2());
+        for (int i = 1; i < max_size_query_ + 1; ++i) {
+            mmatrix(i, 0) = penalties_.gapo() + i * penalties_.gape();
+        }
+    }
+    else if (penalties_.type() == Penalties::Type::DualAffine) {
+        for (int j = 1; j < max_size_target_ + 1; ++j) {
+            mmatrix(0, j) = std::min(penalties_.gapo() + j * penalties_.gape(),
+                                     penalties_.gapo2() + j * penalties_.gape2());
+        }
+        for (int i = 1; i < max_size_query_ + 1; ++i) {
+            mmatrix(i, 0) = std::min(penalties_.gapo() + i * penalties_.gape(),
+                                     penalties_.gapo2() + i * penalties_.gape2());
         }
     }
 
     // Initialize I and D.
-    if (_penalties.type() == Penalties::Type::Affine ||
-        _penalties.type() == Penalties::Type::DualAffine) {
+    if (penalties_.type() == Penalties::Type::Affine ||
+        penalties_.type() == Penalties::Type::DualAffine) {
 
-        _imatrix.resize(_mmatrix.size());
-        _dmatrix.resize(_mmatrix.size());
+        imatrix_.resize(mmatrix_.size());
+        dmatrix_.resize(mmatrix_.size());
 
         imatrix(0, 0) = 0;
         imatrix(0, 0) = 0;
 
-        for (int j = 1; j < _max_size_target + 1; ++j) {
-            imatrix(0, j) = _penalties.gapo() + j * _penalties.gape();
-            dmatrix(0, j) = mmatrix(0, j) + _penalties.gapo();
+        for (int j = 1; j < max_size_target_ + 1; ++j) {
+            imatrix(0, j) = penalties_.gapo() + j * penalties_.gape();
+            dmatrix(0, j) = mmatrix(0, j) + penalties_.gapo();
         }
-        for (int i = 1; i < _max_size_query + 1; ++i) {
-            dmatrix(i, 0) = _penalties.gapo() + i * _penalties.gape();
-            imatrix(i, 0) = mmatrix(i, 0) + _penalties.gapo();
+        for (int i = 1; i < max_size_query_ + 1; ++i) {
+            dmatrix(i, 0) = penalties_.gapo() + i * penalties_.gape();
+            imatrix(i, 0) = mmatrix(i, 0) + penalties_.gapo();
         }
     }
 
     // Initialize I2 and D2.
-    if (_penalties.type() == Penalties::Type::DualAffine) {
+    if (penalties_.type() == Penalties::Type::DualAffine) {
 
-        _imatrix2.resize(_mmatrix.size());
-        _dmatrix2.resize(_mmatrix.size());
+        imatrix2_.resize(mmatrix_.size());
+        dmatrix2_.resize(mmatrix_.size());
 
         imatrix2(0, 0) = 0;
         dmatrix2(0, 0) = 0;
 
-        for (int j = 1; j < _max_size_target + 1; ++j) {
-            imatrix2(0, j) = _penalties.gapo2() + j * _penalties.gape2();
-            dmatrix2(0, j) = mmatrix(0, j) + _penalties.gapo2();
+        for (int j = 1; j < max_size_target_ + 1; ++j) {
+            imatrix2(0, j) = penalties_.gapo2() + j * penalties_.gape2();
+            dmatrix2(0, j) = mmatrix(0, j) + penalties_.gapo2();
         }
 
-        for (int i = 1; i < _max_size_query + 1; ++i) {
-            dmatrix2(i, 0) = _penalties.gapo2() + i * _penalties.gape2();
-            imatrix2(i, 0) = mmatrix(i, 0) + _penalties.gapo2();
+        for (int i = 1; i < max_size_query_ + 1; ++i) {
+            dmatrix2(i, 0) = penalties_.gapo2() + i * penalties_.gape2();
+            imatrix2(i, 0) = mmatrix(i, 0) + penalties_.gapo2();
         }
     }
 }
 
 int DPAlignerBase::memory_usage() {
-    return _mmatrix.capacity() * sizeof(_mmatrix[0]) +
-           _imatrix.capacity() * sizeof(_imatrix[0]) +
-           _dmatrix.capacity() * sizeof(_dmatrix[0]) +
-           _imatrix2.capacity() * sizeof(_imatrix2[0]) +
-           _dmatrix2.capacity() * sizeof(_dmatrix2[0]);
+    return mmatrix_.capacity() * sizeof(mmatrix_[0]) +
+           imatrix_.capacity() * sizeof(imatrix_[0]) +
+           dmatrix_.capacity() * sizeof(dmatrix_[0]) +
+           imatrix2_.capacity() * sizeof(imatrix2_[0]) +
+           dmatrix2_.capacity() * sizeof(dmatrix2_[0]);
 }
 
 void DPAlignerBase::align_glinear(std::string_view target, std::string_view query) {
     for (int i = 1; i < std::ssize(query) + 1; ++i) {
         for (int j = 1; j < std::ssize(target) + 1; ++j) {
-            const int ins = mmatrix(i, j - 1) + _penalties.gape();
-            const int del = mmatrix(i - 1, j) + _penalties.gape();
+            const int ins = mmatrix(i, j - 1) + penalties_.gape();
+            const int del = mmatrix(i - 1, j) + penalties_.gape();
             const int sub = mmatrix(i - 1, j - 1) +
-                            _penalties.subs(target[j - 1], query[i - 1]);
+                            penalties_.subs(target[j - 1], query[i - 1]);
 
             mmatrix(i, j) = std::min({ins, del, sub});
         }
+    }
+
+    // Print the matrix
+    for (int i = 0; i < std::ssize(query) + 1; ++i) {
+        for (int j = 0; j < std::ssize(target) + 1; ++j) {
+            std::cout << mmatrix(i, j) << " ";
+        }
+        std::cout << "\n";
     }
 }
 
@@ -110,17 +118,17 @@ void DPAlignerBase::align_gaffine(std::string_view target, std::string_view quer
         for (int j = 1; j < std::ssize(target) + 1; ++j) {
 
             const int ins = std::min({
-                mmatrix(i, j - 1) + _penalties.gapo() + _penalties.gape(),
-                imatrix(i, j - 1) + _penalties.gape(),
+                mmatrix(i, j - 1) + penalties_.gapo() + penalties_.gape(),
+                imatrix(i, j - 1) + penalties_.gape(),
             });
 
             const int del = std::min({
-                mmatrix(i - 1, j) + _penalties.gapo() + _penalties.gape(),
-                dmatrix(i - 1, j) + _penalties.gape(),
+                mmatrix(i - 1, j) + penalties_.gapo() + penalties_.gape(),
+                dmatrix(i - 1, j) + penalties_.gape(),
             });
 
             const int sub = mmatrix(i - 1, j - 1) +
-                            _penalties.subs(target[j - 1], query[i - 1]);
+                            penalties_.subs(target[j - 1], query[i - 1]);
 
             imatrix(i, j) = ins;
             dmatrix(i, j) = del;
@@ -134,27 +142,27 @@ void DPAlignerBase::align_dgaffine(std::string_view target, std::string_view que
         for (int j = 1; j < std::ssize(target) + 1; ++j) {
 
             const int ins1 = std::min({
-                mmatrix(i, j - 1) + _penalties.gapo() + _penalties.gape(),
-                imatrix(i, j - 1) + _penalties.gape(),
+                mmatrix(i, j - 1) + penalties_.gapo() + penalties_.gape(),
+                imatrix(i, j - 1) + penalties_.gape(),
             });
 
             const int ins2 = std::min({
-                mmatrix(i, j - 1) + _penalties.gapo2() + _penalties.gape2(),
-                imatrix2(i, j - 1) + _penalties.gape2(),
+                mmatrix(i, j - 1) + penalties_.gapo2() + penalties_.gape2(),
+                imatrix2(i, j - 1) + penalties_.gape2(),
             });
 
             const int del1 = std::min({
-                mmatrix(i - 1, j) + _penalties.gapo() + _penalties.gape(),
-                dmatrix(i - 1, j) + _penalties.gape(),
+                mmatrix(i - 1, j) + penalties_.gapo() + penalties_.gape(),
+                dmatrix(i - 1, j) + penalties_.gape(),
             });
 
             const int del2 = std::min({
-                mmatrix(i - 1, j) + _penalties.gapo2() + _penalties.gape2(),
-                dmatrix2(i - 1, j) + _penalties.gape2(),
+                mmatrix(i - 1, j) + penalties_.gapo2() + penalties_.gape2(),
+                dmatrix2(i - 1, j) + penalties_.gape2(),
             });
 
             const int sub = mmatrix(i - 1, j - 1) +
-                            _penalties.subs(target[j - 1], query[i - 1]);
+                            penalties_.subs(target[j - 1], query[i - 1]);
 
             imatrix(i, j) = ins1;
             imatrix2(i, j) = ins2;
@@ -177,7 +185,7 @@ std::string DPAlignerBase::traceback_glinear(std::string_view target,
 
         int idx = 0;
         while (i > 0 || j > 0) {
-            if (i > 0 && mmatrix(i, j) == mmatrix(i - 1, j) + _penalties.gape()) {
+            if (i > 0 && mmatrix(i, j) == mmatrix(i - 1, j) + penalties_.gape()) {
                 if constexpr (swapped) {
                     buf[idx] = 'I';
                 }
@@ -187,7 +195,7 @@ std::string DPAlignerBase::traceback_glinear(std::string_view target,
 
                 i -= 1;
             }
-            else if (j > 0 && mmatrix(i, j) == mmatrix(i, j - 1) + _penalties.gape()) {
+            else if (j > 0 && mmatrix(i, j) == mmatrix(i, j - 1) + penalties_.gape()) {
                 if constexpr (swapped) {
                     buf[idx] = 'D';
                 }
@@ -254,7 +262,7 @@ std::string DPAlignerBase::traceback_gaffine(std::string_view target,
                 }
             }
             else if (j > 0 && curr_matrix == Matrix::I) {
-                if (imatrix(i, j) != imatrix(i, j - 1) + _penalties.gape()) {
+                if (imatrix(i, j) != imatrix(i, j - 1) + penalties_.gape()) {
                     curr_matrix = Matrix::M;
                 }
 
@@ -270,7 +278,7 @@ std::string DPAlignerBase::traceback_gaffine(std::string_view target,
                 j -= 1;
             }
             else if (i > 0 && curr_matrix == Matrix::D) {
-                if (dmatrix(i, j) != dmatrix(i - 1, j) + _penalties.gape()) {
+                if (dmatrix(i, j) != dmatrix(i - 1, j) + penalties_.gape()) {
                     curr_matrix = Matrix::M;
                 }
 
@@ -351,7 +359,7 @@ std::string DPAlignerBase::traceback_dgaffine(std::string_view target,
                 }
             }
             else if (j > 0 && curr_matrix == Matrix::I1) {
-                if (imatrix(i, j) != imatrix(i, j - 1) + _penalties.gape()) {
+                if (imatrix(i, j) != imatrix(i, j - 1) + penalties_.gape()) {
                     curr_matrix = Matrix::M;
                 }
 
@@ -361,7 +369,7 @@ std::string DPAlignerBase::traceback_dgaffine(std::string_view target,
                 j -= 1;
             }
             else if (j > 0 && curr_matrix == Matrix::I2) {
-                if (imatrix2(i, j) != imatrix2(i, j - 1) + _penalties.gape2()) {
+                if (imatrix2(i, j) != imatrix2(i, j - 1) + penalties_.gape2()) {
                     curr_matrix = Matrix::M;
                 }
 
@@ -371,7 +379,7 @@ std::string DPAlignerBase::traceback_dgaffine(std::string_view target,
                 j -= 1;
             }
             else if (i > 0 && curr_matrix == Matrix::D1) {
-                if (dmatrix(i, j) != dmatrix(i - 1, j) + _penalties.gape()) {
+                if (dmatrix(i, j) != dmatrix(i - 1, j) + penalties_.gape()) {
                     curr_matrix = Matrix::M;
                 }
 
@@ -381,7 +389,7 @@ std::string DPAlignerBase::traceback_dgaffine(std::string_view target,
                 i -= 1;
             }
             else if (i > 0 && curr_matrix == Matrix::D2) {
-                if (dmatrix2(i, j) != dmatrix2(i - 1, j) + _penalties.gape2()) {
+                if (dmatrix2(i, j) != dmatrix2(i - 1, j) + penalties_.gape2()) {
                     curr_matrix = Matrix::M;
                 }
 
@@ -407,15 +415,15 @@ std::string DPAlignerBase::align(std::string_view target, std::string_view query
     // We always want the bigger sequence on the left.
     bool swapped = false;
     if (target.size() > query.size()) {
-        std::swap(target, query);
-        swapped = true;
+        // std::swap(target, query);
+        // swapped = true;
     }
 
-    if (std::ssize(target) > _max_size_target || std::ssize(query) > _max_size_query) {
+    if (std::ssize(target) > max_size_target_ || std::ssize(query) > max_size_query_) {
         throw std::length_error("Target or query size exceeds the maximum size");
     }
 
-    if (_penalties.type() == Penalties::Type::Linear) {
+    if (penalties_.type() == Penalties::Type::Linear) {
         align_glinear(target, query);
         if (swapped) {
             return traceback_glinear<true>(target, query);
@@ -424,7 +432,7 @@ std::string DPAlignerBase::align(std::string_view target, std::string_view query
             return traceback_glinear<false>(target, query);
         }
     }
-    else if (_penalties.type() == Penalties::Type::Affine) {
+    else if (penalties_.type() == Penalties::Type::Affine) {
         align_gaffine(target, query);
         if (swapped) {
             return traceback_gaffine<true>(target, query);
@@ -433,7 +441,7 @@ std::string DPAlignerBase::align(std::string_view target, std::string_view query
             return traceback_gaffine<false>(target, query);
         }
     }
-    else if (_penalties.type() == Penalties::Type::DualAffine) {
+    else if (penalties_.type() == Penalties::Type::DualAffine) {
         align_dgaffine(target, query);
         if (swapped) {
             return traceback_dgaffine<true>(target, query);

@@ -95,23 +95,23 @@ private:
     template <bool swapped>
     std::string traceback_dgaffine(std::string_view target, std::string_view query);
 
-    Penalties _penalties;
+    Penalties penalties_;
 
-    int _max_size_target;
-    int _max_size_query;
+    int max_size_target_;
+    int max_size_query_;
 
-    std::vector<int> _mmatrix;
-    int &mmatrix(int i, int j) { return _mmatrix[i * (_max_size_target + 1) + j]; }
+    std::vector<int> mmatrix_;
+    int &mmatrix(int i, int j) { return mmatrix_[i * (max_size_target_ + 1) + j]; }
 
-    std::vector<int> _imatrix;
-    int &imatrix(int i, int j) { return _imatrix[i * (_max_size_target + 1) + j]; }
+    std::vector<int> imatrix_;
+    int &imatrix(int i, int j) { return imatrix_[i * (max_size_target_ + 1) + j]; }
 
-    std::vector<int> _dmatrix;
-    int &dmatrix(int i, int j) { return _dmatrix[i * (_max_size_target + 1) + j]; }
+    std::vector<int> dmatrix_;
+    int &dmatrix(int i, int j) { return dmatrix_[i * (max_size_target_ + 1) + j]; }
 
-    std::vector<int> _imatrix2;
-    int &imatrix2(int i, int j) { return _imatrix2[i * (_max_size_target + 1) + j]; }
+    std::vector<int> imatrix2_;
+    int &imatrix2(int i, int j) { return imatrix2_[i * (max_size_target_ + 1) + j]; }
 
-    std::vector<int> _dmatrix2;
-    int &dmatrix2(int i, int j) { return _dmatrix2[i * (_max_size_target + 1) + j]; }
+    std::vector<int> dmatrix2_;
+    int &dmatrix2(int i, int j) { return dmatrix2_[i * (max_size_target_ + 1) + j]; }
 };
