@@ -72,20 +72,9 @@ The benchmark tool reports execution time and memory consumption for both aligne
   Gap open 2: 4
   Gap extension 2: 6
 
-classical DP Time: 1.01182 s
+Classical DP Time: 1.01182 s
 Singletrack DP Time: 0.613686 s
 
-classical DP memory usage: 19.685 MB
+Classical DP memory usage: 19.685 MB
 Singletrack DP memory usage: 3.94464 MB
-```
-
-### Dataset Format
-
-The dataset file should contain one sequence per line, organized as pairs. The first sequence in each pair (target) starts with >, and the second (query) starts with <. For example:
-
-```
->AA
-<AG
->ACAC
-<CTG
 ```
