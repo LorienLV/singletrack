@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <chrono>
 
 #include "alignment.h"
 #include "penalties.h"
@@ -36,7 +37,7 @@ public:
      *
      * @return The size in bytes of the DPAlignerBase object.
      */
-    int memory_usage();
+    size_t memory_usage();
 private:
     /**
      * Alignment function for gap-linear penalties.
@@ -114,4 +115,8 @@ private:
 
     std::vector<int> dmatrix2_;
     int &dmatrix2(int i, int j) { return dmatrix2_[i * (max_size_target_ + 1) + j]; }
+
+    // Chrono to measure time in backtrakcing
+    // Duration
+    std::chrono::duration<double> backtrace_duration_;
 };

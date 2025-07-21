@@ -82,9 +82,14 @@ DPAlignerBase::DPAlignerBase(const Penalties& penalties,
             imatrix2(i, 0) = mmatrix(i, 0) + penalties_.gapo2();
         }
     }
+
+    backtrace_duration_ = std::chrono::duration<double>::zero();
 }
 
-int DPAlignerBase::memory_usage() {
+size_t DPAlignerBase::memory_usage() {
+    std::cerr << "TIME IN BACKTRACE: "
+              << backtrace_duration_.count() << " seconds\n";
+
     return mmatrix_.capacity() * sizeof(mmatrix_[0]) +
            imatrix_.capacity() * sizeof(imatrix_[0]) +
            dmatrix_.capacity() * sizeof(dmatrix_[0]) +
@@ -309,6 +314,8 @@ std::string DPAlignerBase::traceback_gaffine(std::string_view target,
 template <bool swapped>
 std::string DPAlignerBase::traceback_dgaffine(std::string_view target,
                                               std::string_view query) {
+    auto start = std::chrono::high_resolution_clock::now();
+
     enum class Matrix {
         M,
         I1,
@@ -407,6 +414,9 @@ std::string DPAlignerBase::traceback_dgaffine(std::string_view target,
     });
 
     std::reverse(cigar.begin(), cigar.end());
+
+    auto end = std::chrono::high_resolution_clock::now();
+    backtrace_duration_ += end - start;
 
     return cigar;
 }

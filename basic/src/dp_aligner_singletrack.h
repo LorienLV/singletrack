@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <chrono>
 
 #include "penalties.h"
 
@@ -36,7 +37,7 @@ public:
      *
      * @return The size in bytes of the DPAlignerSingletrack object.
      */
-    int memory_usage();
+    size_t memory_usage();
 
 private:
     /**
@@ -119,4 +120,6 @@ private:
 
     std::vector<int> drow_;
     std::vector<int> drow2_;
+
+    std::chrono::duration<double> backtrace_duration_;
 };

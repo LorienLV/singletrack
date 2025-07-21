@@ -222,7 +222,7 @@ int main(int argc, char *const *argv) {
         std::string_view target_view(target.data() + 1, target.size() - 1);
         std::string_view query_view(query.data() + 1, query.size() - 1);
 
-        // ---------------------- Traditional DP ---------------------- //
+        // ---------------------- Classical DP ---------------------- //
 
         const auto start_dp_base = std::chrono::high_resolution_clock::now();
 
@@ -293,12 +293,12 @@ int main(int argc, char *const *argv) {
             std::cout << "| Alignment " << cnt << " |\n";
             std::cout << "Target: " << target << "\n";
             std::cout << "Query: " << query << "\n";
-            std::cout << "Traditional DP CIGAR: " << dpa_base_cigar << "\n";
+            std::cout << "Classical DP CIGAR: " << dpa_base_cigar << "\n";
             std::cout << "Singletrack DP CIGAR: " << dpa_singletrack_cigar << "\n";
-            std::cout << "Traditional DP score: " << dpa_base_score << "\n";
+            std::cout << "Classical DP score: " << dpa_base_score << "\n";
             std::cout << "Singletrack DP score: " << dpa_singletrack_score << "\n";
 
-            std::cout << "Traditional DP alignment:\n";
+            std::cout << "Classical DP alignment:\n";
             std::cout << dpa_base_alignment.first << "\n";
             std::cout << dpa_base_alignment.second << "\n";
 
@@ -311,12 +311,12 @@ int main(int argc, char *const *argv) {
         ++cnt;
     }
 
-    std::cout << "Traditional DP Time: " << dp_base_time.count() << " s\n";
+    std::cout << "Classical DP Time: " << dp_base_time.count() << " s\n";
     std::cout << "Singletrack DP Time: " << dp_singletrack_time.count() << " s\n";
     std::cout << "\n";
-    std::cout << "Traditional DP memory usage: "
+    std::cout << "Classical DP memory usage: "
               << static_cast<double>(dpa_base.memory_usage()) / 1024 / 1024
-              << " MB\n";
+              << " MB\n" << dpa_base.memory_usage();
     std::cout << "Singletrack DP memory usage: "
               << static_cast<double>(dpa_singletrack.memory_usage()) / 1024 / 1024
               << " MB\n";
