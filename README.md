@@ -4,7 +4,7 @@ This repository contains implementations of the Singletrack algorithm presented 
 
 The repository contains three different implementations of Singletrack, each with its own README:
 - basic: A basic C++ implementation of the classical dynamic programming algorithm with and without using Singletrack.
-- WFA2-lib: Singletrack integrated into WFA2-lib.
+- WFA2-lib: Singletrack integrated into WFA2-lib (commit 2ec28919af3a1b545acfb38e9bdefd160a87f266).
 - KSW2: TODO.
 
 Additionally, we include a tool to generate simulated datasets under `tools/python`.
