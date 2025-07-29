@@ -53,13 +53,10 @@ DPAlignerSingletrack::DPAlignerSingletrack(const Penalties& penalties,
         drow2_.resize(max_size_target_ + 1, 0);
     }
 
-    backtrace_duration_ = std::chrono::duration<double>::zero();
+    traceback_duration_ = std::chrono::duration<double>::zero();
 }
 
 size_t DPAlignerSingletrack::memory_usage() {
-    std::cerr << "TIME IN BACKTRACE: "
-              << backtrace_duration_.count() << " seconds\n";
-
     return mmatrix_.capacity() * sizeof(mmatrix_[0]) +
            drow_.capacity() * sizeof(drow_[0]) +
            drow2_.capacity() * sizeof(drow2_[0]);
@@ -392,7 +389,7 @@ std::string DPAlignerSingletrack::traceback_dgaffine(std::string_view target, st
     std::reverse(cigar.begin(), cigar.end());
 
     auto end = std::chrono::high_resolution_clock::now();
-    backtrace_duration_ += end - start;
+    traceback_duration_ += end - start;
 
     return cigar;
 }

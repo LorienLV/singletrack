@@ -116,7 +116,7 @@ private:
     std::vector<int> dmatrix2_;
     int &dmatrix2(int i, int j) { return dmatrix2_[i * (max_size_target_ + 1) + j]; }
 
-    // Chrono to measure time in backtrakcing
+    // Chrono to measure time in traceback
     // Duration
-    std::chrono::duration<double> backtrace_duration_;
+    std::chrono::duration<double> traceback_duration_;
 };

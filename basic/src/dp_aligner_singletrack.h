@@ -121,5 +121,5 @@ private:
     std::vector<int> drow_;
     std::vector<int> drow2_;
 
-    std::chrono::duration<double> backtrace_duration_;
+    std::chrono::duration<double> traceback_duration_;
 };

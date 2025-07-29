@@ -1,6 +1,6 @@
 # Basic Singletrack Implementation
 
-This folder includes two dynamic programming-based sequence aligners: one implementing the classical backtracking approach (`src/dp_aligner_base.*`), and another utilizing the Singletrack technique (`src/dp_aligner_singletrack.*`). The Singletrack-based aligner incorporates further optimizations in the alignment phase to fully exploit the benefits of the technique.
+This folder includes two dynamic programming-based sequence aligners: one implementing the classical traceback approach (`src/dp_aligner_base.*`), and another utilizing the Singletrack technique (`src/dp_aligner_singletrack.*`). The Singletrack-based aligner incorporates further optimizations in the alignment phase to fully exploit the benefits of the technique.
 
 ## Getting Started
 

@@ -316,7 +316,7 @@ int main(int argc, char *const *argv) {
     std::cout << "\n";
     std::cout << "Classical DP memory usage: "
               << static_cast<double>(dpa_base.memory_usage()) / 1024 / 1024
-              << " MB\n" << dpa_base.memory_usage();
+              << " MB\n";
     std::cout << "Singletrack DP memory usage: "
               << static_cast<double>(dpa_singletrack.memory_usage()) / 1024 / 1024
               << " MB\n";
