@@ -684,17 +684,17 @@ check_cigar_backtrace_affine_m_only(const wavefront_penalties_t* const penalties
 /**
  * Retrieve the cigar of the alignment for gap-affine and dual gap-affine
  * using exclusively the information in the M matrix (M wavefronts). This is
- * slightly slower than the general backtracking, but it enables storing only
+ * slightly slower than the general traceback, but it enables storing only
  * the M matrix when performing the alignment (I1, I2, D1 and D2 only need a
  * small scope).
  *
  * @param wf_aligner The wavefront aligner.
  * @param component_begin unused.
- * @param component_end The component (matrix) where the backtracking starts.
+ * @param component_end The component (matrix) where the traceback starts.
  * @param alignment_score The score of the alignment.
  * @param alignment_k The diagonal that contains the cell (N, M), where the
- * backtracking starts.
- * @param alignment_offset The offset of the cell (N, M), where the backtracking
+ * traceback starts.
+ * @param alignment_offset The offset of the cell (N, M), where the traceback
  * starts.
  */
 void wavefront_backtrace_affine_m_only(

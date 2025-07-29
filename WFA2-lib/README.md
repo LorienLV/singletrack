@@ -1,6 +1,6 @@
 # WFA2-lib + Singletrack
 
-This folder contains a version of WFA2-lib (commit 2ec28919af3a1b545acfb38e9bdefd160a87f266) that uses Singletrack for backtracking, along with optimizations to store only a portion of the indel matrices, rather than the full matrices, for gap-affine and dual gap-affine alignments. This integration is designed to work with global alignments using the library’s `high` memory option. You can test it as follows:
+This folder contains a version of WFA2-lib (commit 2ec28919af3a1b545acfb38e9bdefd160a87f266) that uses Singletrack for the traceback, along with optimizations to store only a portion of the indel matrices, rather than the full matrices, for gap-affine and dual gap-affine alignments. This integration is designed to work with global alignments using the library’s `high` memory option. You can test it as follows:
 
 ```
 ./align_benchmark --wfa-memory high --wfa-span global -a gap-affine-wfa|gap-affine2p-wfa -i INPUT
