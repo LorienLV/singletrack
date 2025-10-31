@@ -8,8 +8,8 @@ You must have either SSE2/SSE4.2 (for x86 architectures) or NEON (for ARM archit
 ## Instalation 
 To compile the library, run the following commands:
 ```console
-git clone https://github.com/criniguez/ksw2_singletrack.git
-cd ksw2_singletrack
+git clone https://github.com/LorienLV/singletrack.git
+cd singletrack/ksw2_singletrack
 make clean all
 ```
 ## Benchmarking
