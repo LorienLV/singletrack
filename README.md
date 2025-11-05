@@ -24,7 +24,7 @@ All aligners in this repository expect a dataset file containing one sequence pe
 
 ## Cite Us
 
-> **Lorién López-Villellas, Cristian Iñiguez, Albert Jiménez-Blanco, Quim Aguado-Puig, Miquel Moretó, Jesús Alastruey-Benedé, Pablo Ibáñez, Miquel Moretó, Santiago Marco-Sola.** *Singletrack: An Algorithm for Improving Memory Consumption and Performance of Gap-Affine Sequence Alignment*, bioRXiv, 2025.
+> **Lorién López-Villellas, Cristian Iñiguez, Albert Jiménez-Blanco, Quim Aguado-Puig, Miquel Moretó, Jesús Alastruey-Benedé, Pablo Ibáñez, Santiago Marco-Sola.** *Singletrack: An Algorithm for Improving Memory Consumption and Performance of Gap-Affine Sequence Alignment*, bioRXiv, 2025.
 
 ```
 @article{LpezVillellas2025,
